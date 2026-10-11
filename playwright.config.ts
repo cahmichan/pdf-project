@@ -1,0 +1,2 @@
+import { defineConfig } from '@playwright/test';
+export default defineConfig({testDir:'tests/ui',timeout:45000,workers:1,webServer:[{command:'.venv\\Scripts\\python.exe worker/dev_server.py',url:'http://127.0.0.1:1419/health',reuseExistingServer:true},{command:'npm run dev',url:'http://127.0.0.1:1420',reuseExistingServer:true}],use:{baseURL:'http://127.0.0.1:1420',channel:'msedge',headless:true,viewport:{width:1440,height:1000},trace:'retain-on-failure'},outputDir:'artifacts/playwright',reporter:[['list'],['json',{outputFile:'artifacts/ui-test-results.json'}]]});

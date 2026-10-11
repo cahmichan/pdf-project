@@ -1,0 +1,101 @@
+import { test, expect } from '@playwright/test';
+import path from 'node:path';
+import fs from 'node:fs';
+const root=process.cwd();
+const fixture=path.join(root,'artifacts','fixtures','sample.pdf');
+
+test('home, PDF render, search, edit, history, and safe export',async({page})=>{
+  const errors:string[]=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/');
+  await expect(page.getByRole('heading',{name:'A little clarity. For every PDF.'})).toBeVisible();
+  await page.screenshot({path:'artifacts/ui/home.png',fullPage:true});
+  await page.getByRole('button',{name:'Open PDF',exact:true}).click();
+  await page.getByLabel('Absolute local file path').fill(fixture);
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.locator('.textLayer')).toContainText('Folio sample document - page 1');
+  await expect(page.locator('.page-error')).toHaveCount(0);
+  await page.screenshot({path:'artifacts/ui/reader.png',fullPage:true});
+  await page.getByRole('button',{name:'Search',exact:true}).click();
+  await page.getByLabel('Search document').fill('SAMPLE-12345');
+  await page.getByRole('button',{name:'Find',exact:true}).click();
+  await expect(page.locator('.search-hit')).toHaveCount(3);
+  await page.getByRole('button',{name:'Edit',exact:true}).click();
+  await page.getByLabel('Text',{exact:true}).fill('Added by interface test');
+  const paper=await page.locator('.paper').boundingBox();
+  if(!paper)throw new Error('Missing page canvas');
+  await page.mouse.move(paper.x+45,paper.y+320);
+  await page.mouse.down();
+  await page.mouse.move(paper.x+350,paper.y+365,{steps:8});
+  await page.mouse.up();
+  await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await expect(page.locator('.textLayer')).toContainText('Added by interface test');
+  await page.screenshot({path:'artifacts/ui/editor.png',fullPage:true});
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await expect(page.locator('.textLayer')).not.toContainText('Added by interface test');
+  await page.getByRole('button',{name:'Redo',exact:true}).click();
+  await expect(page.locator('.textLayer')).toContainText('Added by interface test');
+  const output=path.join(root,'artifacts','fixtures','ui-edited.pdf');
+  await page.getByRole('button',{name:'Save a copy',exact:true}).click();
+  await page.getByLabel('Absolute output path').fill(output);
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.locator('.status-bar')).toContainText('Saved');
+  expect(fs.existsSync(output)).toBeTruthy();
+  expect(fs.readFileSync(fixture).equals(fs.readFileSync(output))).toBeFalsy();
+  expect(errors).toEqual([]);
+});
+
+test('fill existing form and navigate bookmarks',async({page})=>{
+  await page.goto('/');
+  await page.getByRole('button',{name:'Open PDF',exact:true}).click();
+  await page.getByLabel('Absolute local file path').fill(fixture);
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.locator('.textLayer')).toContainText('Folio sample');
+  await page.getByRole('button',{name:'Forms',exact:true}).click();
+  await page.getByLabel('Full name').fill('Updated from UI');
+  await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await expect(page.getByLabel('Full name')).toHaveValue('Updated from UI');
+  await page.getByRole('button',{name:'Bookmarks',exact:true}).click();
+  await page.getByRole('button',{name:'Final page',exact:true}).click();
+  await expect(page.getByLabel('Current page')).toHaveValue('3');
+  await expect(page.locator('.textLayer')).toContainText('Folio sample document - page 3');
+});
+
+test('compare unchanged files and export standalone report',async({page})=>{
+  await page.goto('/');
+  await page.getByRole('button',{name:'Open PDF',exact:true}).click();
+  await page.getByLabel('Absolute local file path').fill(fixture);
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.locator('.textLayer')).toContainText('Folio sample');
+  await page.getByRole('button',{name:'Convert',exact:true}).click();
+  await page.getByLabel('Tool',{exact:true}).selectOption('compare');
+  await page.getByRole('button',{name:'Choose second PDF'}).click();
+  await page.getByLabel('Absolute local file path').fill(fixture);
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'0 changed pages'})).toBeVisible();
+  await page.getByRole('button',{name:'Save HTML report'}).click();
+  const output=path.join(root,'artifacts','fixtures','ui-comparison.html');
+  await page.getByLabel('Absolute HTML output path').fill(output);
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.locator('.status-bar')).toContainText(output);
+  expect(fs.readFileSync(output,'utf8')).toContain('0 changed pages');
+});
+
+test('reader link, remembered position, and selected-page print preview',async({page})=>{
+  await page.goto('/');
+  async function openFixture(){await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(fixture);await page.getByRole('button',{name:'Continue',exact:true}).click();}
+  await openFixture();
+  await expect(page.getByRole('button',{name:'Go to page 3',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Go to page 3',exact:true}).click();
+  await expect(page.getByLabel('Current page')).toHaveValue('3');
+  await page.getByRole('button',{name:'Close sample.pdf',exact:true}).click();
+  await openFixture();
+  await expect(page.getByLabel('Current page')).toHaveValue('3');
+  await page.getByRole('button',{name:'Print',exact:true}).click();
+  await page.getByLabel('Pages: all or a range such as 1-3,5').fill('2');
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Print 1 page'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Open print dialog',exact:true})).toBeEnabled();
+  await expect(page.frameLocator('iframe[title="Document print preview"]').locator('img')).toHaveCount(1);
+  await page.screenshot({path:'artifacts/ui/print-preview.png'});
+});

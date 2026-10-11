@@ -1,0 +1,58 @@
+import { chromium } from '@playwright/test';
+import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { createHash } from 'node:crypto';
+const root=process.cwd();
+const executable=process.argv[2] || path.join(root,'src-tauri','target','release','folio.exe');
+const fixture=path.join(root,'artifacts','fixtures','sample.pdf');
+const receiptPath=path.join(root,'artifacts','native-smoke');fs.mkdirSync(receiptPath,{recursive:true});
+const processHandle=spawn(executable,[fixture],{cwd:path.dirname(executable),windowsHide:true,env:{...process.env,WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:'--remote-debugging-port=9222'}});
+let browser;
+try {
+  for(let attempt=0;attempt<60;attempt++) {
+    if(processHandle.exitCode!==null)throw new Error(`Native application exited: ${processHandle.exitCode}`);
+    try {browser=await chromium.connectOverCDP('http://127.0.0.1:9222');break;}catch {await new Promise(resolve=>setTimeout(resolve,500));}
+  }
+  if(!browser)throw new Error('WebView2 debugging endpoint did not become available.');
+  const page=browser.contexts()[0].pages()[0];
+  if(!page)throw new Error('Native WebView2 page not found.');
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.locator('.textLayer').filter({hasText:'Folio sample document - page 1'}).waitFor({timeout:60000});
+  await page.screenshot({path:path.join(receiptPath,'reader.png')});
+  await page.getByRole('button',{name:'Go to page 3',exact:true}).click();
+  await page.locator('.textLayer').filter({hasText:'Folio sample document - page 3'}).waitFor();
+  await page.getByLabel('Current page').fill('1');
+  await page.locator('.textLayer').filter({hasText:'Folio sample document - page 1'}).waitFor();
+  await page.getByRole('button',{name:'Print',exact:true}).click();
+  await page.getByLabel('Pages: all or a range such as 1-3,5').fill('2');
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await page.getByRole('button',{name:'Open print dialog',exact:true}).waitFor();
+  await page.waitForFunction(()=>{const button=Array.from(document.querySelectorAll('button')).find(button=>button.textContent==='Open print dialog');return button&&!button.disabled;});
+  await page.screenshot({path:path.join(receiptPath,'print-preview.png')});
+  await page.getByRole('button',{name:'Close preview',exact:true}).click();
+  await page.getByRole('button',{name:'Edit',exact:true}).click();
+  await page.getByLabel('Text',{exact:true}).fill('Native WebView2 verified');
+  const paper=await page.locator('.paper').boundingBox();
+  await page.mouse.move(paper.x+45,paper.y+320);await page.mouse.down();await page.mouse.move(paper.x+350,paper.y+365);await page.mouse.up();
+  await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await page.locator('.textLayer').filter({hasText:'Native WebView2 verified'}).waitFor({timeout:30000});
+  await page.screenshot({path:path.join(receiptPath,'editor.png')});
+  const scan=await page.evaluate(async fixturePath=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request:{command:'open',args:{path:fixturePath}}}),path.join(root,'artifacts','fixtures','scan-many.pdf'));
+  const pending=page.evaluate(async info=>{try{return {value:await window.__TAURI_INTERNALS__.invoke('pdf_command',{request:{command:'apply',session:info.id,revision:info.revision,args:{operation:'ocr'}}})};}catch(error){return {error:String(error)};}},scan);
+  await new Promise(resolve=>setTimeout(resolve,1000));
+  await page.evaluate(()=>window.__TAURI_INTERNALS__.invoke('pdf_cancel'));
+  const canceled=await pending;
+  if(!canceled.error?.includes('stopped'))throw new Error(`Cancellation did not interrupt OCR: ${JSON.stringify(canceled)}`);
+  const recovered=await page.evaluate(async info=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request:{command:'info',session:info.id}}),scan);
+  if(recovered.revision!==scan.revision)throw new Error('Canceled OCR unexpectedly committed a revision.');
+  const imported=await page.evaluate(async fixturePath=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request:{command:'import_office',args:{path:fixturePath}}}),path.join(root,'artifacts','fixtures','office.docx'));
+  if(!imported.page_count)throw new Error('Native Office import returned no PDF pages.');
+  const digest=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
+  if(errors.length)throw new Error(JSON.stringify(errors));
+  fs.writeFileSync(path.join(receiptPath,'receipt.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
+} finally {
+  if(browser)await browser.close();
+  processHandle.kill();
+}
