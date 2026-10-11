@@ -143,3 +143,20 @@ Next preservation fix: a direct source probe found doc.select with duplicate pag
 - Physical print/scanner, native file dialogs, installed UI and unusual personal PDFs remain manual acceptance gates. No personal documents or hardware jobs were used.
 
 Next: exact visual crop controls and page-number/watermark customization, then remaining form/font/conversion/OCR/scanner/local-model work in the original roadmap. The full goal remains active; this milestone does not establish full feature parity.
+
+## 0.9.0 geometry and numbering candidate
+
+- Added independent visual left/top/right/bottom crop margins, point/mm/inch controls, drag-to-crop on the current page, size readout and reset to full MediaBox. Offset MediaBox origins are handled explicitly. Cropping hides rather than removes content.
+- Added page-number starting value, format tokens ({n}, {total}, {page}, {pages}), top/middle/bottom position, left/center/right alignment, size/color/opacity and spacing. Watermarks share position/alignment/opacity/spacing controls. Duplicate page selections are deduplicated for these decorations. Preset whitelist supports the new settings.
+- Core suite: 101 passed. Twenty-four crop cases compare exact retained pixels with PDFium across rotations and positive/negative origins, then repeat trim/reset/save/reopen. Twenty-four numbering cases check visual bounds and independent extraction after export. Invalid inputs leave the revision unchanged.
+- New browser crop/reset/selection/unit/number/watermark/save/reopen workflow passed. Added explicit Text aria label after a locator failed during tool switching. Production frontend build passed before that final label change; full browser/package/native gates are next. Latest verified installer remains 0.8.0.
+
+## 0.9.0 verified milestone
+
+- All 115 Python tests and 11 browser UI tests passed (51.0s). Frozen-worker crop/reset/custom numbering and all prior smoke workflows passed with developer Python absent from PATH. Frontend/Rust/NSIS packaging passed.
+- Actual bundled WebView2 smoke passed precise crop/apply/undo and custom number/apply/undo alongside all prior native workflows, with no captured page errors. Crop selection and decoration screenshots visually inspected. A saved-PDF text-trace probe confirmed watermark opacity 0.25 and number/watermark bounds; receipt copied with UI evidence.
+- Installer: artifacts/releases/0.9.0/Folio_0.9.0_x64-setup.exe (57,327,765 bytes). SHA256: 207df31d16c7396d6f09af7511af84fcd51cbe5ca0151064c70a16ba5f8e3078.
+- New page decoration supports one line of Latin text and standard Helvetica. Diagonal/image watermarks, richer font support and paragraph layouts remain separate work. Exact crop is a visibility change, not content removal.
+- Installer UI/native dialogs, physical printing/scanning, high-DPI and unusual personal PDFs remain manual gates. No personal documents or hardware jobs were used.
+
+Next: on-page form interaction, radio groups/detection and remaining text/font/OCR/conversion/structural Markdown/scanner/local-model work from the original roadmap. The full goal remains active.

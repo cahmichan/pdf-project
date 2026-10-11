@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English OCR model. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.8.0/Folio_0.8.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
+Latest verified installer milestone: `artifacts/releases/0.9.0/Folio_0.9.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
 
 ## Free Office runtime
 
@@ -43,3 +43,9 @@ Under Convert, Archival PDF/A-2b exports the whole document as a separate static
 Open a PDF, select Pages, and choose Organize pages visually. Drag thumbnails or use Move left/right, Duplicate selected, and Remove selected. Cancel discards staged changes. Apply page order makes one undoable working revision; save a separate copy when ready. Copied form fields receive unique names, and copied internal links target the first retained copy of their destination.
 
 For multiple output files, select Split into separate PDFs and Choose split method. Choose one file per page, a fixed page count per file, or custom groups such as `1-3;4-6;7,9`. Select an output folder and save. Each output gets a unique filename; the working document does not change. A JSON receipt records completed or failed files. Interrupted receipts also appear in Batch tools under Recent batch jobs. Keep completed outputs if a job is interrupted; rerunning creates new files.
+
+## Precise crop, page numbers and text watermarks
+
+In Pages, select Crop margins. Trim each visible edge independently in points, millimeters or inches; these margins follow the displayed rotation and apply to the chosen page range. Draw a rectangle keeps that area on the current page only. Reset to full page restores the MediaBox for the chosen range. A size readout previews the current page. Undo reverses the last operation. Cropping hides content rather than removing it.
+
+Page numbers supports a starting number and a format such as `Page {n} of {total}`. `{n}` is the sequence starting at your chosen value, `{total}` is the count of selected pages, `{page}` is the original working-document page number, and `{pages}` is the document page count. Numbering follows the ordered page range; repeated page numbers are used only once. Choose top/middle/bottom, left/center/right, font size, color, opacity and spacing. Text watermarks share the placement and opacity controls. Both currently use a single line of Latin text with standard Helvetica. Save a separate copy and review placement.

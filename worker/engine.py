@@ -285,27 +285,12 @@ class Engine:
                             raise PDFError('Unlock the added PDF before merging it.')
                         doc.insert_pdf(other, widgets=True, links=True, annots=True)
             elif operation == 'crop':
-                for n in selected:
-                    page = doc[n]
-                    margin = float(args.get('margin', 20))
-                    rect = pdf.Rect(page.cropbox)
-                    rect.x0 += margin; rect.y0 += margin
-                    rect.x1 -= margin; rect.y1 -= margin
-                    if rect.is_empty:
-                        raise PDFError('Crop margins are larger than the page.')
-                    page.set_cropbox(rect)
+                from page_tools import crop_page
+                for n in selected:crop_page(doc[n],args)
             elif operation in ('page_numbers', 'watermark'):
-                for offset, n in enumerate(selected):
-                    page = doc[n]
-                    text = str(int(args.get('start', 1)) + offset) if operation == 'page_numbers' else args.get('text', 'DRAFT')
-                    size = float(args.get('size', 11 if operation == 'page_numbers' else 48))
-                    if operation == 'page_numbers':
-                        rect = pdf.Rect(24, page.rect.height - 35, page.rect.width - 24, page.rect.height - 12)
-                    else:
-                        y = page.rect.height / 2 - size
-                        rect = pdf.Rect(24, y, page.rect.width - 24, y + size * 2)
-                    if page.insert_textbox(rect*page.derotation_matrix, text, fontsize=size, align=1, rotate=page.rotation, color=rgb(args.get('color')), fill_opacity=float(args.get('opacity', .3 if operation == 'watermark' else 1))) < 0:
-                        raise PDFError('Text does not fit. Reduce the font size.')
+                from page_tools import decorate_page
+                selected=list(dict.fromkeys(selected))
+                for offset,n in enumerate(selected):decorate_page(doc[n],args,offset,len(selected),len(doc))
             elif operation == 'fill_forms':
                 values = args['values']
                 for page in doc:

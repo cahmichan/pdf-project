@@ -6,7 +6,7 @@ This is a live implementation tracker, not a parity claim. Evidence is recorded 
 | --- | --- | --- |
 | Reader | Tabs, zoom, page navigation, selectable text, search, bookmarks, themes, page/external links, remembered position/zoom, selected-page print preview | Native print acceptance, viewport/large-file performance |
 | Sessions | Immutable revisions, source preservation, undo/redo, persisted recovery | Cleanup policy, close-window unsaved handling; native cancellation/reconnection passed; timeout expiry not yet exercised |
-| Page tools | Merge, ranges/extract, reorder/duplicate, delete, rotate, crop, blank page, numbers, text watermark; independent duplicates, visual drag organizer and split groups verified in 0.8 | Exact crop controls, broader complex form/bookmark preservation cases |
+| Page tools | Merge, ranges/extract, reorder/duplicate, delete, rotate, crop, blank page, numbers, text watermark; independent duplicates, visual drag organizer/split groups, precise visual crop/reset/selection and customizable numbers/watermarks verified in 0.9 | Image/diagonal watermarks, broader complex form/bookmark preservation cases |
 | Images | Images to PDF, insert image/signature graphic, PNG/JPG page export, embedded image extraction and replace/remove | JPG quality controls, image masks and shared-image compatibility cases |
 | Annotation | Quad text highlights, underline/strikeout, rectangles, sticky notes, freehand ink, standard stamps, comment edit/delete | Broader rotated text markup fixtures |
 | Forms | Fill fields, create text/checkbox/dropdown/list fields, flatten widgets | Radio groups, direct page interaction, detection, complex field compatibility |
@@ -20,6 +20,6 @@ This is a live implementation tracker, not a parity claim. Evidence is recorded 
 | Markdown | Plain reading-order text export | Structural heading/table/list preservation |
 | Workflows/scanner | Saved presets, batch jobs, per-file recovery receipts, failure continuation | Scanner integration |
 | Intelligence | Not implemented yet | Free local models, hardware/license evaluation, quality gates |
-| Installer | 0.8.0 installer, bundled OCR, Office adapter and native WebView2/edit/link/preview/cancel/batch smoke passed | Installed UI, actual print/scanner acceptance |
+| Installer | 0.9.0 installer, bundled OCR, Office adapter and native WebView2/edit/link/preview/cancel/batch smoke passed | Installed UI, actual print/scanner acceptance |
 
 No personal files have been used for automated tests. Synthetic fixtures only.

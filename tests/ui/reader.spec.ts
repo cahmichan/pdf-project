@@ -314,3 +314,31 @@ test('split PDF exports individual, fixed-size and custom groups with reopen',as
   await page.locator('.page-item').nth(1).click();await expect(page.locator('.textLayer')).toContainText('Folio sample document - page 1');
   expect(fs.readFileSync(fixture).equals(original)).toBeTruthy();
 });
+
+test('precise crop controls, reset, selection and custom numbering save and reopen',async({page})=>{
+  const original=fs.readFileSync(fixture);
+  await page.goto('/');await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(fixture);await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.locator('.textLayer')).toContainText('Folio sample document - page 1');
+  await page.locator('.mode-bar').getByRole('button',{name:'Pages',exact:true}).click();await page.getByLabel('Tool',{exact:true}).selectOption('crop');
+  await page.getByLabel('Crop left',{exact:true}).fill('10');await page.getByLabel('Crop top',{exact:true}).fill('20');await page.getByLabel('Crop right',{exact:true}).fill('30');await page.getByLabel('Crop bottom',{exact:true}).fill('40');
+  await expect(page.locator('.tool-panel')).toContainText('460 × 640 pt');await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await expect(page.locator('.page-item').first()).toContainText('460 × 640 pt');
+  await page.getByLabel('Crop method').selectOption('reset');await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await expect(page.locator('.page-item').first()).toContainText('500 × 700 pt');
+  await page.getByLabel('Crop units').selectOption('mm');await page.getByLabel('Crop method').selectOption('selection');
+  await expect(page.locator('.page-loading')).toBeHidden();const paper=await page.locator('.paper').boundingBox();if(!paper)throw new Error('No rendered page');
+  await page.mouse.move(paper.x+50,paper.y+100);await page.mouse.down();await page.mouse.move(paper.x+450,paper.y+600);await page.mouse.up();
+  await expect(page.locator('.tool-panel')).toContainText('141.111 × 176.389 mm');
+  await page.screenshot({path:'artifacts/ui/crop-selection.png',fullPage:true});await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await expect(page.locator('.page-item').first()).toContainText('400 × 500 pt');await expect(page.locator('.page-item').nth(1)).toContainText('500 × 700 pt');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(page.locator('.page-item').first()).toContainText('500 × 700 pt');
+  await page.getByLabel('Tool',{exact:true}).selectOption('page_numbers');await page.getByLabel('Starting number').fill('9');await page.getByLabel('Number format').fill('Page {n} / {total}');
+  await page.getByLabel('Text vertical position').selectOption('top');await page.getByLabel('Text horizontal alignment').selectOption('right');
+  await page.getByLabel('Page number size').fill('14');await page.getByRole('button',{name:'Apply to working copy'}).click();await expect(page.locator('.textLayer')).toContainText('Page 9 / 3');
+  await page.getByLabel('Tool',{exact:true}).selectOption('watermark');await page.getByLabel('Text',{exact:true}).fill('Review copy');await page.getByLabel('Size',{exact:true}).fill('15');await page.getByLabel('Text opacity').fill('25');await page.getByLabel('Text vertical position').selectOption('bottom');await page.getByLabel('Text horizontal alignment').selectOption('left');
+  await page.getByRole('button',{name:'Apply to working copy'}).click();await expect(page.locator('.textLayer')).toContainText('Review copy');
+  await page.screenshot({path:'artifacts/ui/page-decoration.png',fullPage:true});
+  const output=path.join(root,'artifacts','fixtures','ui-crop-numbered.pdf');await page.getByRole('button',{name:'Save a copy',exact:true}).click();await page.getByLabel('Absolute output path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('.status-bar')).toContainText(output);
+  await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.locator('.textLayer')).toContainText('Page 9 / 3');await expect(page.locator('.textLayer')).toContainText('Review copy');expect(fs.readFileSync(fixture).equals(original)).toBeTruthy();
+});

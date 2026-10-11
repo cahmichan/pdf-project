@@ -55,7 +55,7 @@ export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink
     void paint();
     return ()=>{cancelled=true;render?.cancel();layer?.cancel();};
   },[loaded,page,zoom]);
-  const choose = ['add_text','replace_text','add_image','highlight','underline','strikeout','rectangle','stamp','ink','comment','redact','add_form'].includes(tool);
+  const choose = ['crop','add_text','replace_text','add_image','highlight','underline','strikeout','rectangle','stamp','ink','comment','redact','add_form'].includes(tool);
   function point(event:React.PointerEvent):[number,number] {
     const bounds=wrapper.current!.getBoundingClientRect();
     return [Math.max(0,Math.min(dimensions.width,event.clientX-bounds.left)),Math.max(0,Math.min(dimensions.height,event.clientY-bounds.top))];

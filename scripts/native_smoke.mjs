@@ -42,6 +42,25 @@ try {
   await page.getByRole('button',{name:'Undo',exact:true}).click();
   await page.waitForFunction(()=>document.querySelectorAll('.page-item').length===3);
   await page.locator('.page-loading').waitFor({state:'hidden'});
+  await page.getByLabel('Tool',{exact:true}).selectOption('crop');
+  await page.getByLabel('Crop left',{exact:true}).fill('12');
+  await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await page.waitForFunction(()=>document.querySelector('.page-item')?.textContent.includes('468 × 660 pt'));
+  await page.locator('.page-loading').waitFor({state:'hidden'});
+  await page.screenshot({path:path.join(receiptPath,'precise-crop.png')});
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('.page-item')?.textContent.includes('500 × 700 pt'));
+  await page.getByLabel('Tool',{exact:true}).selectOption('page_numbers');
+  await page.getByLabel('Starting number').fill('88');
+  await page.getByLabel('Number format').fill('Native {n}/{total}');
+  await page.getByLabel('Text vertical position').selectOption('top');
+  await page.getByLabel('Text horizontal alignment').selectOption('right');
+  await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await page.locator('.textLayer').filter({hasText:'Native 88/3'}).waitFor();
+  await page.screenshot({path:path.join(receiptPath,'custom-numbers.png')});
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await page.waitForFunction(()=>!document.querySelector('.textLayer')?.textContent.includes('Native 88/3'));
+  await page.locator('.page-loading').waitFor({state:'hidden'});
   await page.getByRole('button',{name:'Edit',exact:true}).click();
   await page.getByLabel('Text',{exact:true}).fill('Native WebView2 verified');
   const paper=await page.locator('.paper').boundingBox();
@@ -102,7 +121,7 @@ try {
   },{fixture,folder:path.join(receiptPath,'split')});
   if(split.items.length!==2)throw new Error('Native split failed.');
   const digest=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,configured_free_archival_conversion:true,visual_page_organizer:true,split_pdf_reopen:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
+  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,configured_free_archival_conversion:true,visual_page_organizer:true,split_pdf_reopen:true,precise_crop_and_custom_numbering:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
   if(errors.length)throw new Error(JSON.stringify(errors));
   fs.writeFileSync(path.join(receiptPath,'receipt.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 } finally {

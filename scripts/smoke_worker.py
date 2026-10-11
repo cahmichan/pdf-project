@@ -65,6 +65,13 @@ try:
     with pdf.open(parts['items'][1]['output']) as checked:assert len(checked)==2 and checked.page_xref(0)!=checked.page_xref(1)
     info=command({'command':'undo','session':organized['id'],'revision':organized['revision']})
     receipt['independent_page_copies_and_split']=True
+    info=command({'command':'apply','session':info['id'],'revision':info['revision'],'args':{'operation':'crop','margins':{'left':12,'top':20,'right':20,'bottom':20}}})
+    assert info['pages'][0]['width']==468 and info['pages'][0]['height']==660
+    info=command({'command':'apply','session':info['id'],'revision':info['revision'],'args':{'operation':'crop','crop_mode':'reset'}})
+    assert info['pages'][0]['width']==500 and info['pages'][0]['height']==700
+    info=command({'command':'apply','session':info['id'],'revision':info['revision'],'args':{'operation':'page_numbers','start':88,'number_format':'Packaged {n}/{total}','position':'top','align':'right'}})
+    with pdf.open(info['path']) as checked:assert 'Packaged 88/3' in checked[0].get_text()
+    receipt['precise_crop_and_custom_numbering']=True
     import uuid
     identity=output/f'synthetic-{uuid.uuid4().hex}.pfx'
     command({'command':'create_identity','args':{'path':str(identity),'name':'Packaged synthetic identity','password':'Synthetic-smoke-only-123'}})

@@ -36,6 +36,85 @@ def apply(engine,session,operation,**args):
     return engine.dispatch({'command':'apply','session':session['id'],'revision':session['revision'],'args':{'operation':operation,**args}})
 
 
+@pytest.mark.parametrize('rotation',[0,90,180,270])
+@pytest.mark.parametrize('origin',[(0,0),(-30,-60),(20,30)])
+@pytest.mark.parametrize('mode',['margins','selection'])
+def test_precise_crop_visual_pixels_offset_media_reset_and_save(tmp_path,rotation,origin,mode):
+    source=tmp_path/'crop-source.pdf';doc=pdf.open();page=doc.new_page(width=400,height=500)
+    page.draw_rect(pdf.Rect(50,80,280,390),color=(1,0,0),fill=(.2,.6,.8))
+    page.insert_text((70,160),'Preserved crop content',fontsize=12)
+    page.set_mediabox(pdf.Rect(origin[0],origin[1],origin[0]+400,origin[1]+500))
+    page.set_cropbox(pdf.Rect(origin[0]+10,20,origin[0]+390,480));page.set_rotation(rotation)
+    dimensions=(page.rect.width,page.rect.height);doc.save(source);doc.close();baseline=fingerprint(source)
+    engine=Engine(tmp_path/'working');session=engine.open_file({'path':str(source)})
+    with pdfium.PdfDocument(str(source)) as independent:before=independent[0].render(scale=1).to_pil().convert('RGB')
+    args={'crop_mode':mode}
+    if mode=='margins':args['margins']={'left':11,'top':17,'right':23,'bottom':29}
+    else:args['rect']=[11,17,dimensions[0]-23,dimensions[1]-29]
+    session=apply(engine,session,'crop',**args)
+    assert session['pages'][0]['width']==dimensions[0]-34
+    assert session['pages'][0]['height']==dimensions[1]-46
+    with pdfium.PdfDocument(session['path']) as independent:
+        image=independent[0].render(scale=1).to_pil().convert('RGB')
+        assert image.tobytes()==before.crop((11,17,before.width-23,before.height-29)).tobytes()
+    # Repeated trimming operates relative to the current visible crop.
+    session=apply(engine,session,'crop',margins=dict.fromkeys(('left','top','right','bottom'),5))
+    assert session['pages'][0]['width']==dimensions[0]-44
+    session=apply(engine,session,'crop',crop_mode='reset')
+    expected=(500,400) if rotation in (90,270) else (400,500)
+    assert (session['pages'][0]['width'],session['pages'][0]['height'])==expected
+    output=tmp_path/'crop-reset.pdf';engine.export(engine.session(session['id']),{'path':str(output)})
+    with pdfium.PdfDocument(str(output)) as independent:
+        image=independent[0].render(scale=1).to_pil();assert image.size==expected
+    assert fingerprint(source)==baseline
+
+
+def test_precise_crop_rejects_invalid_geometry_atomically(fixture):
+    engine,session,source=fixture
+    for settings in ({'margins':{'left':-1,'right':0,'top':0,'bottom':0}},
+                     {'margins':{'left':float('nan'),'right':0,'top':0,'bottom':0}},
+                     {'margins':{'left':400,'right':0,'top':0,'bottom':0}},
+                     {'margins':{'left':0}}, {'crop_mode':'selection','rect':[1,1,401,499]},
+                     {'crop_mode':'selection','rect':[0,0,float('inf'),3]}):
+        with pytest.raises(PDFError):apply(engine,session,'crop',**settings)
+        assert engine.dispatch({'command':'info','session':session['id']})['revision']==session['revision']
+
+
+@pytest.mark.parametrize('rotation',[0,90,180,270])
+@pytest.mark.parametrize('position',['top','middle','bottom'])
+@pytest.mark.parametrize('align',['left','right'])
+def test_custom_number_format_and_visual_alignment(fixture,rotation,position,align,tmp_path):
+    engine,session,source=fixture;baseline=fingerprint(source)
+    session=apply(engine,session,'crop',pages='all',margin=10)
+    session=apply(engine,session,'rotate',pages='all',degrees=rotation)
+    session=apply(engine,session,'page_numbers',pages='3,1',start=7,number_format='Leaf {n}/{total} ({page}/{pages})',
+                  position=position,align=align,size=10,inset=18,edge=15,color='#aa0000',opacity=.8)
+    expected={0:'Leaf 8/2 (1/3)',2:'Leaf 7/2 (3/3)'}
+    with pdf.open(session['path']) as doc:
+        for index,text in expected.items():
+            page=doc[index];rect=page.search_for(text)[0]*page.rotation_matrix
+            if position=='top':assert 10<rect.y0<30
+            elif position=='bottom':assert page.rect.height-35<rect.y0<page.rect.height-10
+            else:assert abs((rect.y0+rect.y1)/2-page.rect.height/2)<10
+            if align=='left':assert rect.x0==pytest.approx(18,abs=1)
+            else:assert rect.x1==pytest.approx(page.rect.width-18,abs=1)
+        assert 'Leaf' not in doc[1].get_text()
+    output=tmp_path/'numbered.pdf';engine.export(engine.session(session['id']),{'path':str(output)})
+    with pdfium.PdfDocument(str(output)) as independent:
+        for index,text in expected.items():assert text in independent[index].get_textpage().get_text_range()
+    assert fingerprint(source)==baseline
+
+
+def test_numbering_and_watermark_settings_reject_invalid_values(fixture):
+    engine,session,source=fixture
+    for settings in ({'start':1.5},{'number_format':'{unknown}'},{'opacity':2},{'size':float('nan')},{'inset':250},{'position':'diagonal'}):
+        with pytest.raises(PDFError):apply(engine,session,'page_numbers',**settings)
+        assert engine.dispatch({'command':'info','session':session['id']})['revision']==session['revision']
+    session=apply(engine,session,'watermark',pages='1',text='Review copy',position='top',align='right',size=15,opacity=.4)
+    with pdf.open(session['path']) as doc:
+        page=doc[0];rect=page.search_for('Review copy')[0];assert rect.y0<30 and rect.x1==pytest.approx(page.rect.width-24,abs=1)
+
+
 def test_open_preserves_original_and_pdfium_renders(fixture):
     engine,session,source=fixture
     assert Path(session['path']).read_bytes()==source.read_bytes()
