@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English OCR model. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.6.0/Folio_0.6.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation and saved batch workflows.
+Latest verified installer milestone: `artifacts/releases/0.7.0/Folio_0.7.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
 
 ## Free Office runtime
 
@@ -31,3 +31,9 @@ Folio retains private revision copies and OCR text under its Tauri app-data dire
 Under Protect, choose Sign with certificate. Use a local PKCS#12 .pfx/.p12 identity or create an encrypted self-signed personal identity. Save a separate signed PDF and reopen it to inspect signed bytes, cryptographic validity and trust separately. The initial certificate signature is invisible; a signature graphic can be placed before signing.
 
 Export the public certificate when you need an explicit trust certificate. It contains no private key. Folio does not change Windows trust stores. Keep the private identity file and its password safe; Folio clears passwords after each operation and does not remember them. Offline inspection does not establish current revocation status or a trusted signing time. Self-signed certificates are not automatically trusted in other readers.
+
+## Free archival runtime
+
+Run `.\.venv\Scripts\python.exe scripts/setup_archival.py` from the project folder. This downloads verified Ghostscript, a project-local free Temurin JRE, 7-Zip and veraPDF. It extracts files under tools, verifies veraPDF's detached publisher signature with Git's GPG, and records runtime paths in Folio's settings. It does not register an application, change system PATH, or require Oracle Java. Keep the configured project folder available; the large tools are separate from the core installer.
+
+Under Convert, Archival PDF/A-2b exports the whole document as a separate static copy, then requires an independent veraPDF pass. Forms/annotations are flattened and links/attachments are removed. Review text, colors and layout. Check PDF/A-2b inspects the current working copy and can save the full XML report. Other PDF/A conformance levels are not implemented.

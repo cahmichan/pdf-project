@@ -466,11 +466,12 @@ class Engine:
         if destination.exists() and not args.get('overwrite'):
             raise PDFError('This output already exists. Confirm replacement or choose a different name.')
         mode = args.get('mode', 'pdf')
+        validation = None
         temporary = destination.parent / f'.folio-{uuid.uuid4().hex}{destination.suffix}'
         try:
             with pdf.open(self.current(session)) as doc:
                 selected = pages_arg(args.get('pages'), len(doc))
-                if doc.get_sigflags()>0 and mode in ('extract','compress','compress_screen','compress_print','protect','unlock','repair') and not args.get('allow_signature_changes'):
+                if doc.get_sigflags()>0 and mode in ('extract','compress','compress_screen','compress_print','protect','unlock','repair','pdfa_2b') and not args.get('allow_signature_changes'):
                     raise PDFError('This PDF has signature fields. Confirm exporting a rewritten copy; existing signatures may become invalid.')
                 if mode in ('pdf', 'extract', 'compress', 'compress_screen', 'compress_print', 'protect', 'unlock', 'repair'):
                     if mode == 'extract':
@@ -496,6 +497,10 @@ class Engine:
                                 raise PDFError('Encrypted output verification failed.')
                         if len(check) != len(doc):
                             raise PDFError('Export page-count verification failed.')
+                elif mode == 'pdfa_2b':
+                    from archival import convert
+                    report=self.sessions_dir/session['id']/('archive-'+uuid.uuid4().hex)/'validation.xml'
+                    validation=convert(self.current(session),temporary,self.root,report,self.progress)
                 elif mode in ('txt','markdown'):
                     separator = '\n\n---\n\n' if mode == 'markdown' else '\n\f\n'
                     temporary.write_text(separator.join(doc[n].get_text(sort=True) for n in selected), encoding='utf-8')
@@ -558,7 +563,7 @@ class Engine:
             if mode == 'pdf':
                 session['saved_hash'] = fingerprint(self.current(session))
                 self.persist(session)
-            return {'path': str(destination), 'bytes': destination.stat().st_size, 'mode': mode}
+            return {'path': str(destination), 'bytes': destination.stat().st_size, 'mode': mode, 'validation':validation}
         finally:
             temporary.unlink(missing_ok=True)
 
@@ -645,6 +650,26 @@ class Engine:
             return self.info(session)
         if command == 'inspect_page':
             return self.inspect_page(session,args)
+        if command == 'inspect_pdfa':
+            from archival import locate, validate
+            runtime=locate(self.root)
+            if runtime is None:raise PDFError('Free archival tools are not configured. See docs/SETUP.md.')
+            report=self.sessions_dir/session['id']/('archive-'+uuid.uuid4().hex)/'validation.xml'
+            return validate(self.current(session),runtime,report,self.progress)
+        if command == 'save_validation_report':
+            report=Path(args['report']).resolve()
+            folder=(self.sessions_dir/session['id']).resolve()
+            if not report.is_relative_to(folder) or report.name!='validation.xml' or not report.parent.name.startswith('archive-'):
+                raise PDFError('Choose a validation report belonging to this session.')
+            destination=Path(args['path']).resolve()
+            if destination.suffix.lower()!='.xml':raise PDFError('Save the conformance report as an XML file.')
+            if destination.exists() and not args.get('overwrite'):raise PDFError('The report output already exists.')
+            destination.parent.mkdir(parents=True,exist_ok=True)
+            pending=destination.parent/('.folio-report-'+uuid.uuid4().hex+'.xml')
+            try:
+                shutil.copyfile(report,pending);os.replace(pending,destination)
+            finally:pending.unlink(missing_ok=True)
+            return {'path':str(destination)}
         if command == 'inspect_signatures':
             from signatures import inspect_signatures
             return inspect_signatures(self.current(session), args.get('trust_path'))

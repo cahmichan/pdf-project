@@ -9,12 +9,20 @@ import pymupdf as pdf
 root=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(root/'worker'))
 from office import locate
+from archival import locate as locate_archival
 output=root/'artifacts'/'packaged-smoke';output.mkdir(parents=True,exist_ok=True)
 binary=Path(sys.argv[1]) if len(sys.argv)>1 else root/'src-tauri'/'binaries'/'pdf-worker.exe'
 office_runtime=locate(output/'data')
+archival_runtime=locate_archival(output/'data')
+settings={}
 if office_runtime:
     (output/'data').mkdir(exist_ok=True)
-    (output/'data'/'settings.json').write_text(json.dumps({'office_runtime':str(office_runtime)}),encoding='utf-8')
+    settings['office_runtime']=str(office_runtime)
+if archival_runtime:
+    settings.update({name:str(archival_runtime[name]) for name in ('ghostscript_runtime','java_runtime','verapdf_jar')})
+if settings:
+    (output/'data').mkdir(exist_ok=True)
+    (output/'data'/'settings.json').write_text(json.dumps(settings),encoding='utf-8')
 environment=os.environ.copy()
 environment.pop('PYTHONHOME',None);environment.pop('PYTHONPATH',None)
 environment['PATH']=str(Path(os.environ['SystemRoot'])/'System32')
@@ -57,6 +65,10 @@ try:
     signature=signed['validation']['signatures'][0]
     assert signature['intact'] and signature['valid'] and not signature['trusted']
     receipt['offline_certificate_signing']=True
+    if archival_runtime:
+        archived=command({'command':'export','session':info['id'],'args':{'mode':'pdfa_2b','path':str(output/'archival.pdf'),'overwrite':True}})
+        assert archived['validation']['compliant'] and archived['validation']['failed_rules']==0
+        receipt['configured_free_archival_conversion']=True
     (output/'receipt.json').write_text(json.dumps(receipt,indent=2),encoding='utf-8')
     print(json.dumps(receipt,indent=2))
 finally:

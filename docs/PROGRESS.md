@@ -109,3 +109,20 @@ Next: free offline certificate signing/verification using pyHanko. The 0.5.0 wor
 - Certificates in automated evidence are explicitly synthetic. Revocation/trusted timestamp guarantees, broader real-world signatures and visible certificate appearances remain pending. No actual private identity was inspected or generated for the user.
 
 Next: archival conversion plus independent conformance validation with free local tools. Official Ghostscript 10.08.0, 7-Zip 26.04 MSI and Temurin 21.0.12.1 JRE downloads have pinned SHA256 verification; not yet extracted/configured. Full goal stays active.
+
+## 0.7.0 archival candidate
+
+- Prepared project-local Ghostscript 10.08.0, 7-Zip 26.04, Temurin 21.0.12.1 JRE and veraPDF 1.30.3. Official binary hashes are pinned; veraPDF ZIP is pinned and its detached GPG signature verified against documented publisher fingerprint 13DD102B4DD69354D12DE5A83184863278B17FE7. No Windows app registration or system PATH changes. Setup merges optional runtime paths into Folio's settings. Receipt: artifacts/archival/runtime.json.
+- Added static PDF/A-2b export gated by independent veraPDF rules, current-PDF conformance inspection and session-scoped XML report export. Forms/annotations are baked; links/attachments/JavaScript removed. Source and working revision remain intact.
+- Five archival tests pass: real conformance on cropped/rotated forms with transparent graphics, independent PDFium text/render dimensions, ordinary-PDF rejection, forged-report-path rejection and failed-validation rollback preserving an existing output.
+- Browser export/inspect/reopen/report save passes, and conformance dialog screenshot visually inspected. Corrected test waiting to use the report output path rather than the prior PDF's Saved status.
+- Full package and native configured-runtime verification are next. Latest verified milestone remains 0.6.0.
+
+## 0.7.0 verified milestone
+
+- All 48 Python tests and 8 UI tests passed. Frozen-worker archival conversion and independent validator passed with developer Python absent from PATH. Frontend/Rust/NSIS packaging passed.
+- Actual bundled desktop smoke passed all prior operations plus configured Ghostscript/veraPDF PDF/A-2b export, with no captured page errors.
+- Installer: artifacts/releases/0.7.0/Folio_0.7.0_x64-setup.exe (57,317,853 bytes). SHA256: 3175c2e829a0e23f14f5954a6db3316a70611dfa7aedc37483bac59667ac281a. Optional archival tools remain external configured files under tools; core installer does not embed them.
+- Manual native dialogs/installed UI/physical print/scanner and unusual real documents remain acceptance gates.
+
+Next preservation fix: a direct source probe found doc.select with duplicate page numbers shares page objects/widgets. An edit can affect another duplicate. Independent-copy insertion plus unique copied field names preserves separate editing; links/bookmarks need explicit fixtures before release. This is a known limitation of the 0.7.0 duplicate workflow until fixed. Continue with visual page organization and split tools after the preservation fix. Full goal remains active.

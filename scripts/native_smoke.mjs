@@ -76,8 +76,14 @@ try {
   },{fixture,identity:path.join(receiptPath,`synthetic-${Date.now()}.pfx`),output:path.join(receiptPath,'signed.pdf')});
   const signature=signing.signatures[0];
   if(!signature?.intact||!signature.valid||signature.trusted)throw new Error(`Native offline signature failed: ${JSON.stringify(signing)}`);
+  const archival=await page.evaluate(async input=>{
+    const invoke=request=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request});
+    const doc=await invoke({command:'open',args:{path:input.fixture}});
+    return invoke({command:'export',session:doc.id,args:{path:input.output,mode:'pdfa_2b',overwrite:true}});
+  },{fixture,output:path.join(receiptPath,'archival.pdf')});
+  if(!archival.validation?.compliant||archival.validation.failed_rules)throw new Error(`Native archival validation failed: ${JSON.stringify(archival)}`);
   const digest=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
+  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,configured_free_archival_conversion:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
   if(errors.length)throw new Error(JSON.stringify(errors));
   fs.writeFileSync(path.join(receiptPath,'receipt.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 } finally {

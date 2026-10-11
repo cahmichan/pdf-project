@@ -18,3 +18,9 @@ tools/LibreOffice/
 tools/lessmsi/
 public/pdfjs/
 src-tauri/gen/
+
+tools/7zip/
+tools/Ghostscript/
+tools/Java/
+tools/veraPDF/
+tools/veraPDF-installer/

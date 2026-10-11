@@ -212,3 +212,31 @@ test('create free personal identity, sign separate PDF, and inspect offline',asy
   await expect(page.locator('.signature-results dd').nth(2)).toHaveText('Yes');
   const stored=await page.evaluate(()=>JSON.stringify(localStorage));expect(stored).not.toContain('Synthetic-password-123');
 });
+
+test('export independently validated archival PDF and save conformance report',async({page})=>{
+  test.skip(!fs.existsSync(path.join(root,'tools','Ghostscript','bin','gswin64c.exe')),'Optional archival tools absent');
+  const output=path.join(root,'artifacts','fixtures','ui-archival.pdf');
+  const report=path.join(root,'artifacts','fixtures','ui-archival-report.xml');
+  await page.goto('/');await page.getByRole('button',{name:'Open PDF',exact:true}).click();
+  await page.getByLabel('Absolute local file path').fill(fixture);await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.locator('.textLayer')).toContainText('Folio sample');
+  await page.getByRole('button',{name:'Convert',exact:true}).click();await page.getByLabel('Tool',{exact:true}).selectOption('inspect_pdfa');
+  await page.getByRole('button',{name:'Check conformance',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'PDF/A-2b conformance failed',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Close',exact:true}).click();
+  await page.getByLabel('Tool',{exact:true}).selectOption('pdfa_2b');await page.getByRole('button',{name:'Export a copy',exact:true}).click();
+  await page.getByLabel('Absolute output path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'PDF/A-2b conformance passed',exact:true})).toBeVisible();
+  await page.screenshot({path:'artifacts/ui/archival-result.png',fullPage:true});
+  await page.getByRole('button',{name:'Save XML validation report',exact:true}).click();
+  await page.getByLabel('Absolute XML output path').fill(report);await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.locator('.status-bar')).toContainText('Saved');
+  await expect(page.locator('.status-bar')).toContainText(report);
+  expect(fs.readFileSync(report,'utf8')).toContain('isCompliant="true"');
+  await page.getByRole('button',{name:'Close',exact:true}).click();
+  await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(output);
+  await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('.textLayer')).toContainText('Folio sample');
+  await page.getByRole('button',{name:'Convert',exact:true}).click();await page.getByLabel('Tool',{exact:true}).selectOption('inspect_pdfa');
+  await page.getByRole('button',{name:'Check conformance',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'PDF/A-2b conformance passed',exact:true})).toBeVisible();
+});
