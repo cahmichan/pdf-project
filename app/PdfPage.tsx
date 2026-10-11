@@ -5,9 +5,10 @@ import 'pdfjs-dist/web/pdf_viewer.css';
 import { documentUrl, type DocumentInfo, type PageInfo } from './api';
 GlobalWorkerOptions.workerSrc = workerUrl;
 
-export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink}: {
+export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink,strokes,onStroke,inkWidth,inkColor}: {
   document:DocumentInfo;page:number;zoom:number;tool:string;
   onSelect:(rect:number[])=>void;selection:number[]|null;
+  strokes:number[][][];onStroke:(stroke:number[][])=>void;inkWidth:number;inkColor:string;
   links:PageInfo['links'];onLink:(link:PageInfo['links'][number])=>void;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -15,6 +16,7 @@ export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink
   const wrapper = useRef<HTMLDivElement>(null);
   const start = useRef<[number,number]|null>(null);
   const [dimensions,setDimensions] = useState({width:595,height:842});
+  const ink=useRef<number[][]>([]);const [activeInk,setActiveInk]=useState<number[][]>([]);
   const [drag,setDrag] = useState<number[]|null>(null);
   const [error,setError] = useState('');
   const [loading,setLoading] = useState(true);
@@ -53,18 +55,19 @@ export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink
     void paint();
     return ()=>{cancelled=true;render?.cancel();layer?.cancel();};
   },[loaded,page,zoom]);
-  const choose = ['add_text','replace_text','add_image','highlight','rectangle','comment','redact','add_form'].includes(tool);
+  const choose = ['add_text','replace_text','add_image','highlight','underline','strikeout','rectangle','stamp','ink','comment','redact','add_form'].includes(tool);
   function point(event:React.PointerEvent):[number,number] {
     const bounds=wrapper.current!.getBoundingClientRect();
     return [Math.max(0,Math.min(dimensions.width,event.clientX-bounds.left)),Math.max(0,Math.min(dimensions.height,event.clientY-bounds.top))];
   }
-  function begin(event:React.PointerEvent) {if(!choose)return;start.current=point(event);event.currentTarget.setPointerCapture(event.pointerId);setDrag(null);}
-  function move(event:React.PointerEvent) {if(!start.current)return;const end=point(event);setDrag([Math.min(start.current[0],end[0]),Math.min(start.current[1],end[1]),Math.max(start.current[0],end[0]),Math.max(start.current[1],end[1])]);}
+  function begin(event:React.PointerEvent) {if(!choose)return;start.current=point(event);if(tool==='ink'){ink.current=[start.current];setActiveInk(ink.current);}event.currentTarget.setPointerCapture(event.pointerId);setDrag(null);}
+  function move(event:React.PointerEvent) {if(!start.current)return;const end=point(event);if(tool==='ink'){ink.current=[...ink.current,end];setActiveInk(ink.current);return;}setDrag([Math.min(start.current[0],end[0]),Math.min(start.current[1],end[1]),Math.max(start.current[0],end[0]),Math.max(start.current[1],end[1])]);}
   function finish(event:React.PointerEvent) {
     if (!start.current)return;
     const end=point(event);const origin=start.current;start.current=null;setDrag(null);
-    if (Math.abs(end[0]-origin[0])<4 || Math.abs(end[1]-origin[1])<4)return;
+    if (tool!=='ink'&&(Math.abs(end[0]-origin[0])<4 || Math.abs(end[1]-origin[1])<4))return;
     const model=document.pages[page-1];
+    if(tool==='ink'){const points=[...ink.current,end];ink.current=[];setActiveInk([]);onStroke(points.map(p=>[p[0]*model.width/dimensions.width,p[1]*model.height/dimensions.height]));return;}
     onSelect([Math.min(origin[0],end[0])*model.width/dimensions.width,Math.min(origin[1],end[1])*model.height/dimensions.height,Math.max(origin[0],end[0])*model.width/dimensions.width,Math.max(origin[1],end[1])*model.height/dimensions.height]);
   }
   const model=document.pages[page-1];
@@ -72,7 +75,8 @@ export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink
   return <div className="paper" ref={wrapper} style={{width:dimensions.width,height:dimensions.height}}>
     <canvas ref={canvas}/><div ref={textLayer} className="textLayer" style={{pointerEvents:choose?'none':'auto'}}/>
     {!choose&&links.map((link,index)=><button key={index} className="pdf-link" aria-label={link.uri?`Open link ${link.uri}`:`Go to page ${link.page}`} title={link.uri||`Page ${link.page}`} onClick={()=>onLink(link)} style={{left:link.rect[0]*dimensions.width/model.width,top:link.rect[1]*dimensions.height/model.height,width:(link.rect[2]-link.rect[0])*dimensions.width/model.width,height:(link.rect[3]-link.rect[1])*dimensions.height/model.height}}/>)}
-    {choose && <div className="selection-surface" onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={()=>{start.current=null;setDrag(null);}}/>}
+    {choose && <div className="selection-surface" onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={()=>{start.current=null;setDrag(null);ink.current=[];setActiveInk([]);}}/>}
+    {tool==='ink'&&<svg className="ink-preview" width={dimensions.width} height={dimensions.height} aria-label="Ink preview"><g fill="none" stroke={inkColor} strokeWidth={inkWidth*zoom} strokeLinecap="round" strokeLinejoin="round">{strokes.map((stroke,index)=><polyline key={index} points={stroke.map(p=>`${p[0]*dimensions.width/model.width},${p[1]*dimensions.height/model.height}`).join(' ')}/>)}<polyline points={activeInk.map(p=>p.join(',')).join(' ')}/></g></svg>}
     {shown && <div className={`selection-box ${tool==='redact'?'redaction':''}`} style={{left:shown[0],top:shown[1],width:shown[2]-shown[0],height:shown[3]-shown[1]}}/>}
     {loading && <div className="page-loading">Rendering page…</div>}
     {error && <div className="page-error">Unable to render this page: {error}</div>}

@@ -1,5 +1,6 @@
 """Canonical document sessions. All edits create validated immutable revisions."""
 from __future__ import annotations
+import math
 import hashlib
 import json
 import os
@@ -302,7 +303,7 @@ class Engine:
                     raise PDFError('Choose a page in this document.')
                 page = doc[n]
                 # Map visual UI rectangles through derotation without altering CropBox/Rotate.
-                rect = page.rect if operation in ('replace_image','delete_image','edit_annotation','delete_annotation') else valid_rect(args.get('rect', [40, 40, 240, 100]), page)
+                rect = page.rect if operation in ('replace_image','delete_image','edit_annotation','delete_annotation','ink') else valid_rect(args.get('rect', [40, 40, 240, 100]), page)
                 if operation in ('add_text', 'replace_text'):
                     size = float(args.get('size', 12))
                     text = str(args.get('text', ''))
@@ -340,6 +341,44 @@ class Engine:
                 elif operation == 'rectangle':
                     annotation = page.add_rect_annot(rect)
                     annotation.set_colors(stroke=rgb(args.get('color')))
+                    annotation.update()
+                elif operation == 'ink':
+                    strokes = args.get('strokes', [])
+                    if not isinstance(strokes, list) or not 1 <= len(strokes) <= 100:
+                        raise PDFError('Draw between 1 and 100 strokes before applying ink.')
+                    if sum(len(stroke) for stroke in strokes if isinstance(stroke, list)) > 20000:
+                        raise PDFError('This ink selection has too many points. Apply smaller groups of strokes.')
+                    mapped = []
+                    for stroke in strokes:
+                        if not isinstance(stroke, list) or len(stroke) < 2:
+                            raise PDFError('Each ink stroke needs at least two points.')
+                        points = []
+                        for value in stroke:
+                            if not isinstance(value, list) or len(value) != 2:
+                                raise PDFError('Ink points must contain two coordinates.')
+                            point = pdf.Point(float(value[0]), float(value[1]))
+                            if not all(math.isfinite(v) for v in point) or not page.rect.contains(point):
+                                raise PDFError('Ink strokes must stay inside the page.')
+                            points.append(tuple(point * page.derotation_matrix))
+                        mapped.append(points)
+                    width = float(args.get('width', 2))
+                    if not math.isfinite(width) or not .5 <= width <= 20:
+                        raise PDFError('Ink width must be between 0.5 and 20 points.')
+                    annotation = page.add_ink_annot(mapped)
+                    annotation.set_colors(stroke=rgb(args.get('color')))
+                    annotation.set_border(width=width)
+                    annotation.set_info(content=str(args.get('text', '')))
+                    annotation.update()
+                elif operation == 'stamp':
+                    stamps = {'approved':pdf.STAMP_Approved, 'draft':pdf.STAMP_Draft,
+                              'confidential':pdf.STAMP_Confidential, 'final':pdf.STAMP_Final,
+                              'not_approved':pdf.STAMP_NotApproved}
+                    kind = str(args.get('stamp', 'approved'))
+                    if kind not in stamps:
+                        raise PDFError('Choose a supported PDF stamp.')
+                    annotation = page.add_stamp_annot(rect, stamp=stamps[kind])
+                    annotation.set_colors(stroke=rgb(args.get('color')))
+                    annotation.set_rotation(page.rotation)
                     annotation.update()
                 elif operation == 'comment':
                     page.add_text_annot(rect.tl, args.get('text','Comment'))

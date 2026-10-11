@@ -8,7 +8,7 @@ This is a live implementation tracker, not a parity claim. Evidence is recorded 
 | Sessions | Immutable revisions, source preservation, undo/redo, persisted recovery | Cleanup policy, close-window unsaved handling; native cancellation/reconnection passed; timeout expiry not yet exercised |
 | Page tools | Merge, ranges/extract, reorder/duplicate, delete, rotate, crop, blank page, numbers, text watermark | Visual drag reordering, exact crop controls, stronger form/bookmark preservation cases |
 | Images | Images to PDF, insert image/signature graphic, PNG/JPG page export, embedded image extraction and replace/remove | JPG quality controls, image masks and shared-image compatibility cases |
-| Annotation | Quad text highlights, underline/strikeout, rectangles, sticky notes, comment edit/delete | Ink, stamps, broader rotated text markup fixtures |
+| Annotation | Quad text highlights, underline/strikeout, rectangles, sticky notes, freehand ink, standard stamps, comment edit/delete | Broader rotated text markup fixtures |
 | Forms | Fill fields, create text/checkbox/dropdown/list fields, flatten widgets | Radio groups, direct page interaction, detection, complex field compatibility |
 | Existing text | Latin rectangle replacement with overflow checks, visual rotation mapping; image overlaps rejected | Original fonts, block reflow, extended scripts, scan reconstruction |
 | Security | AES-256 export, password open/decrypt, rectangular redaction plus auxiliary scrub | Broader redaction fixtures, permissions controls, certificate signing |
@@ -20,6 +20,6 @@ This is a live implementation tracker, not a parity claim. Evidence is recorded 
 | Markdown | Plain reading-order text export | Structural heading/table/list preservation |
 | Workflows/scanner | Saved presets, batch jobs, per-file recovery receipts, failure continuation | Scanner integration |
 | Intelligence | Not implemented yet | Free local models, hardware/license evaluation, quality gates |
-| Installer | 0.4.0 installer, bundled OCR, Office adapter and native WebView2/edit/link/preview/cancel/batch smoke passed | Installed UI, actual print/scanner acceptance |
+| Installer | 0.5.0 installer, bundled OCR, Office adapter and native WebView2/edit/link/preview/cancel/batch smoke passed | Installed UI, actual print/scanner acceptance |
 
 No personal files have been used for automated tests. Synthetic fixtures only.

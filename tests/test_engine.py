@@ -329,3 +329,42 @@ def test_page_numbers_on_rotated_pages_have_visual_footer_position(fixture,rotat
         assert bounds.y0>page.rect.height-40
     with pdfium.PdfDocument(changed['path']) as independent:
         assert '9001' in independent[0].get_textpage().get_text_range()
+
+@pytest.mark.parametrize('rotation',[0,90,180,270])
+def test_ink_stamp_rotation_reopen_and_removal(tmp_path, rotation):
+    source=tmp_path/'annotation-source.pdf'
+    doc=pdf.open();page=doc.new_page(width=400,height=500)
+    page.set_cropbox(pdf.Rect(20,30,380,470));page.set_rotation(rotation)
+    doc.save(source);doc.close();baseline=fingerprint(source)
+    engine=Engine(tmp_path/'working');session=engine.dispatch({'command':'open','args':{'path':str(source)}})
+    strokes=[[[50,60],[100,70],[140,60]],[[80,90],[80,150]]]
+    session=apply(engine,session,'ink',strokes=strokes,width=3,color='#cc0000')
+    with pdf.open(session['path']) as result:
+        page=result[0];annotation=page.first_annot
+        assert annotation.type[1]=='Ink'
+        actual=[[list(pdf.Point(p)*page.rotation_matrix) for p in stroke] for stroke in annotation.vertices]
+        for expected,found in zip(strokes,actual):
+            for a,b in zip(expected,found):assert a==pytest.approx(b,abs=.1)
+    session=apply(engine,session,'stamp',rect=[40,180,260,260],stamp='approved',color='#006633')
+    with pdf.open(session['path']) as result:
+        page=result[0];annotations=list(page.annots())
+        assert [a.type[1] for a in annotations]==['Ink','Stamp']
+        stamp_rect=annotations[1].rect*page.rotation_matrix
+        assert page.rect.contains(stamp_rect)
+    output=tmp_path/'annotated.pdf'
+    engine.dispatch({'command':'export','session':session['id'],'args':{'path':str(output),'mode':'pdf'}})
+    with pdfium.PdfDocument(str(output)) as independent:
+        image=independent[0].render(scale=1,draw_annots=True).to_pil().convert('RGB')
+        assert sum(1 for r,g,b in image.get_flattened_data() if r>120 and g<100 and b<100)>50
+    inspected=engine.dispatch({'command':'inspect_page','session':session['id'],'args':{'page':1}})
+    session=apply(engine,session,'delete_annotation',id=inspected['annotations'][0]['id'])
+    with pdf.open(session['path']) as result:
+        page=result[0];assert [a.type[1] for a in page.annots()]==['Stamp']
+    assert fingerprint(source)==baseline
+
+
+def test_ink_rejects_invalid_points_without_revision(fixture):
+    engine,session,source=fixture
+    for strokes in ([[[-5,2],[10,20]]],[[[1,2],[float('nan'),3]]],[[[1,2]]]):
+        with pytest.raises(PDFError):apply(engine,session,'ink',strokes=strokes)
+        assert engine.dispatch({'command':'info','session':session['id']})['revision']==session['revision']

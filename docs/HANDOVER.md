@@ -6,7 +6,7 @@ Objective remains active: finish the personal, free Windows PDF editor/reader fo
 
 Tauri 2 desktop host, React/TypeScript interface, local PDF.js 6 viewer resources, PyMuPDF 1.28.2 canonical session engine packaged with PyInstaller. English Tesseract fast data is bundled for persistent offline OCR. All document mutations create validated immutable revisions with undo/redo. Normal PDF save copies exact working bytes. Secure redaction rewrites and sanitizes auxiliary content. Source documents remain intact.
 
-`artifacts/releases/0.4.0` contains the latest fully verified installer and SHA256 receipt. Version 0.4.0 includes saved presets/batch jobs, signature rewrite checks, Office import, reader links/position/print preview and improved rotated editing; package and actual native WebView2 verification passed. Refer to the latest PROGRESS.md and receipts before choosing a build.
+`artifacts/releases/0.5.0` contains the latest fully verified installer and SHA256 receipt. Version 0.5.0 includes saved presets/batch jobs, signature rewrite checks, Office import, reader links/position/print preview and improved rotated editing; package and actual native WebView2 verification passed. Refer to the latest PROGRESS.md and receipts before choosing a build.
 
 The optional free LibreOffice 26.8.1.1 runtime is extracted under `tools/LibreOffice/SourceDir/LibreOffice`. `scripts/setup_office.py` verifies and configures it in `%APPDATA%/personal.folio.pdf/settings.json`. It uses lessmsi extraction and does not register a Windows application. Keep the project folder available for that configured runtime. Office conversions use isolated profiles and preserve original input files. Linked external content and macros are rejected/disabled.
 

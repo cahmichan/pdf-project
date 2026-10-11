@@ -78,3 +78,18 @@ Next independent implementation: saved workflows and batch jobs, then remaining 
 - Installer UI, physical printing/scanning and unusual real documents remain manual gates.
 
 Next: ink/stamp annotation tools and remaining feature tracker items. Full goal remains active.
+
+## 0.5.0 annotation candidate
+
+- Added multi-stroke freehand ink preview, width/color controls, discard-last/clear controls and standard approved/draft/confidential/final/not-approved PDF stamps. Annotations remain removable/comment-editable after save/reopen.
+- Cropped/rotated ink/stamp tests passed at 0/90/180/270 degrees with independent PDFium rendering, exact vertex coordinate checks and source hash preservation. Invalid/non-finite points fail without a revision change.
+- Fixed page selection support for underline and strikeout. Frontend production build passed; ink/stamp browser create/save/reopen/delete passed. Full packaging/native gates are next.
+
+## 0.5.0 verified milestone
+
+- All 41 Python tests and 6 UI tests passed. Frozen-worker OCR/Office/batch passed. Frontend/Rust release and NSIS bundling passed after closing a prematurely launched smoke app that locked the executable.
+- Final bundled native smoke passed editing, ink/stamp annotations, links, print preview, cancellation/reconnection, Office and batch, with no captured page errors. The harness now waits for the ink revision before placing a stamp.
+- Installer: artifacts/releases/0.5.0/Folio_0.5.0_x64-setup.exe (49,634,392 bytes). SHA256: 16948f5bf0e10ddf14d94ade95587e70826566ecff310530a20ae71612989940.
+- Ink and final annotation UI screenshots visually inspected. Physical print/scanner and installed UI gates remain pending.
+
+Next: free offline certificate signing/verification using pyHanko. The 0.5.0 worker does not include that new dependency or feature. Goal remains active.

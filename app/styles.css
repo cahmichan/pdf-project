@@ -9,3 +9,6 @@
 .print-dialog iframe{width:100%;height:60vh;border:1px solid var(--border);background:#e9edf3}
 
 .input-modal-backdrop{z-index:30}.batch-dialog{display:flex;flex-direction:column;gap:14px}.batch-dialog .field-row{align-items:center;flex-wrap:wrap}.batch-dialog .field-row>label{min-width:200px}.batch-dialog table{border-collapse:collapse;width:100%;font-size:12px}.batch-dialog td,.batch-dialog th{text-align:left;vertical-align:top;padding:9px;border-bottom:1px solid var(--border);overflow-wrap:anywhere}.batch-path{font-size:12px;overflow-wrap:anywhere;color:var(--muted)}.preset-editor{display:flex;flex-direction:column;gap:14px}.preset-step{padding:15px;border:1px solid var(--border);border-radius:9px;display:flex;flex-direction:column;gap:12px}.recent-job{display:flex;width:100%;margin-top:8px}.home-buttons{flex-wrap:wrap}
+
+.ink-preview{position:absolute;inset:0;pointer-events:none;z-index:5}
+.selection-surface{touch-action:none}

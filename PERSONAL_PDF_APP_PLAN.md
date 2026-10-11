@@ -4,7 +4,7 @@ Prepared: 11 October 2026
 
 Revised: 11 October 2026 - free-only requirement confirmed by the user.
 
-Status: Planning only. No application code, dependency installation, or implementation has been started.
+Status: Implementation authorized through the active session goal. This document retains the original roadmap; current verified builds and limitations are recorded in docs/PROGRESS.md and docs/FEATURES.md.
 
 ## 1. Recommendation
 

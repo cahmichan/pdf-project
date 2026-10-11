@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English OCR model. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.3.0/Folio_0.3.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview and native worker cancellation.
+Latest verified installer milestone: `artifacts/releases/0.5.0/Folio_0.5.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview native worker cancellation and saved batch workflows.
 
 ## Free Office runtime
 

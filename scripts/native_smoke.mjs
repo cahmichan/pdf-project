@@ -38,6 +38,22 @@ try {
   await page.getByRole('button',{name:'Apply to working copy'}).click();
   await page.locator('.textLayer').filter({hasText:'Native WebView2 verified'}).waitFor({timeout:30000});
   await page.screenshot({path:path.join(receiptPath,'editor.png')});
+  await page.getByRole('button',{name:'Annotate',exact:true}).click();
+  await page.getByLabel('Tool',{exact:true}).selectOption('ink');
+  const inkPaper=await page.locator('.paper').boundingBox();
+  await page.mouse.move(inkPaper.x+60,inkPaper.y+390);await page.mouse.down();
+  await page.mouse.move(inkPaper.x+120,inkPaper.y+420,{steps:8});await page.mouse.move(inkPaper.x+200,inkPaper.y+390,{steps:8});await page.mouse.up();
+  await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await page.waitForFunction(()=>document.querySelector('.status-bar').textContent.includes('Freehand ink applied'));
+  await page.locator('.page-loading').waitFor({state:'hidden'});
+  await page.getByLabel('Tool',{exact:true}).selectOption('stamp');
+  await page.mouse.move(inkPaper.x+70,inkPaper.y+460);await page.mouse.down();await page.mouse.move(inkPaper.x+300,inkPaper.y+530);await page.mouse.up();
+  await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await page.waitForFunction(()=>document.querySelector('.status-bar').textContent.includes('PDF stamp applied'));
+  await page.getByLabel('Tool',{exact:true}).selectOption('delete_annotation');
+  await page.waitForFunction(()=>{const select=document.querySelector('select[aria-label="Annotation"]');return select&&select.textContent.includes('Ink')&&select.textContent.includes('Stamp');});
+  await page.locator('.page-loading').waitFor({state:'hidden'});
+  await page.screenshot({path:path.join(receiptPath,'annotations.png')});
   const scan=await page.evaluate(async fixturePath=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request:{command:'open',args:{path:fixturePath}}}),path.join(root,'artifacts','fixtures','scan-many.pdf'));
   const pending=page.evaluate(async info=>{try{return {value:await window.__TAURI_INTERNALS__.invoke('pdf_command',{request:{command:'apply',session:info.id,revision:info.revision,args:{operation:'ocr'}}})};}catch(error){return {error:String(error)};}},scan);
   await new Promise(resolve=>setTimeout(resolve,1000));
@@ -51,7 +67,7 @@ try {
   const batch=await page.evaluate(async input=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request:{command:'batch_run',args:{preset:'handout',paths:[input.fixture],folder:input.folder}}}),{fixture,folder:path.join(root,'artifacts','native-smoke','batch')});
   if(batch.items[0].status!=='done')throw new Error(`Native batch failed: ${JSON.stringify(batch)}`);
   const digest=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
+  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
   if(errors.length)throw new Error(JSON.stringify(errors));
   fs.writeFileSync(path.join(receiptPath,'receipt.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 } finally {
