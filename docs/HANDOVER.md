@@ -6,7 +6,7 @@ Objective remains active: finish the personal, free Windows PDF editor/reader fo
 
 Tauri 2 desktop host, React/TypeScript interface, local PDF.js 6 viewer resources, PyMuPDF 1.28.2 canonical session engine packaged with PyInstaller. English Tesseract fast data is bundled for persistent offline OCR. All document mutations create validated immutable revisions with undo/redo. Normal PDF save copies exact working bytes. Secure redaction rewrites and sanitizes auxiliary content. Source documents remain intact.
 
-`artifacts/releases/0.5.0` contains the latest fully verified installer and SHA256 receipt. Version 0.5.0 includes saved presets/batch jobs, signature rewrite checks, Office import, reader links/position/print preview and improved rotated editing; package and actual native WebView2 verification passed. Refer to the latest PROGRESS.md and receipts before choosing a build.
+`artifacts/releases/0.6.0` contains the latest fully verified installer and SHA256 receipt. Version 0.6.0 includes offline certificate signing/inspection, ink/stamps, saved presets/batch jobs, signature rewrite checks, Office import, reader links/position/print preview and improved rotated editing; package and actual native WebView2 verification passed. Refer to the latest PROGRESS.md and receipts before choosing a build.
 
 The optional free LibreOffice 26.8.1.1 runtime is extracted under `tools/LibreOffice/SourceDir/LibreOffice`. `scripts/setup_office.py` verifies and configures it in `%APPDATA%/personal.folio.pdf/settings.json`. It uses lessmsi extraction and does not register a Windows application. Keep the project folder available for that configured runtime. Office conversions use isolated profiles and preserve original input files. Linked external content and macros are rejected/disabled.
 
@@ -25,6 +25,6 @@ Core checks include independent PDFium rendering/extraction, encrypted outputs, 
 
 ## Continue
 
-Finish the current candidate's native/installer checks, preserve the installer receipt, and make a local source checkpoint. Continue meaningful independent work from FEATURES.md: advanced text/image/layout fidelity, form detection/radio groups, annotation ink/stamps, structural Markdown/HTML, archival conversion with independent validation, certificate signing and scanner integration. Evaluate optional local models only with free components and useful quality evidence.
+Finish the current candidate's native/installer checks, preserve the installer receipt, and make a local source checkpoint. Continue meaningful independent work from FEATURES.md: advanced text/image/layout fidelity, form detection/radio groups, annotation ink/stamps, structural Markdown/HTML, archival conversion with independent validation, visible certificate appearances and scanner integration. Evaluate optional local models only with free components and useful quality evidence.
 
 Never describe unsupported conversion/layout cases as Acrobat parity. OCR spelling, complex layouts, original-font reuse and semantic comparison need separate evidence. Printing, scanner hardware, native dialogs/installer UI and unusual real PDFs require explicit manual acceptance when the user returns. Maintain PROGRESS.md, FEATURES.md and setup instructions as implementation progresses. Do not mark the full goal complete just because a build passes.

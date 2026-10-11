@@ -608,6 +608,12 @@ class Engine:
             return self.open_file(args)
         if command == 'create':
             return self.create(args)
+        if command == 'create_identity':
+            from signatures import create_identity
+            return create_identity(args)
+        if command == 'export_certificate':
+            from signatures import export_certificate
+            return export_certificate(args)
         if command == 'import_office':
             from office import locate, convert
             runtime=locate(self.root)
@@ -639,6 +645,14 @@ class Engine:
             return self.info(session)
         if command == 'inspect_page':
             return self.inspect_page(session,args)
+        if command == 'inspect_signatures':
+            from signatures import inspect_signatures
+            return inspect_signatures(self.current(session), args.get('trust_path'))
+        if command == 'sign_copy':
+            if request.get('revision') != session['revision']:
+                raise PDFError('The working document changed. Review it before signing.')
+            from signatures import sign_copy
+            return sign_copy(self.current(session), session['source'], args)
         if command == 'thumbnail':
             number = int(args.get('page',1)) - 1
             destination = self.sessions_dir / session['id'] / f'thumb-{session["revision"]}-{number}.png'

@@ -93,3 +93,19 @@ Next: ink/stamp annotation tools and remaining feature tracker items. Full goal 
 - Ink and final annotation UI screenshots visually inspected. Physical print/scanner and installed UI gates remain pending.
 
 Next: free offline certificate signing/verification using pyHanko. The 0.5.0 worker does not include that new dependency or feature. Goal remains active.
+
+## Certificate signing candidate
+
+- Added pyHanko 0.37.0 (MIT) and free cryptographic dependencies; exact requirements refreshed. Signing creates an incrementally appended separate PDF and verifies its integrity before publishing it. It never goes through the ordinary rewrite commit.
+- Added PKCS#12 identity selection, encrypted RSA-3072 personal identity creation, public certificate export, and explicit-trust offline inspection. Passwords are not recorded in sessions, receipts or localStorage and are cleared after operations. No Windows trust-store changes or network requests are used.
+- Synthetic tests passed byte-prefix preservation, PDFium render/extraction, two consecutive signatures, tamper detection, exact-byte save, edit guard, explicit trust, wrong passwords and identity-overwrite refusal. External sockets are blocked in the test (local asyncio socket pairs allowed).
+- Browser create/sign/export-certificate/reopen/inspect flow passed. Revocation assurance, trusted timestamps, visible certificate appearances and broader third-party signatures remain unsupported/pending. Full package/native checks are next.
+
+## 0.6.0 verified milestone
+
+- All 43 Python tests and 7 UI tests passed. Frozen worker passed offline signing with developer Python absent from PATH; current dependency notices cover 124 installed packages. Frontend/Rust/NSIS packaging passed.
+- Actual bundled desktop smoke passed render/edit/ink/stamps/link/preview/cancel/reconnect/Office/batch and offline certificate signing/inspection, with no captured page errors. Signature UI screenshot visually inspected.
+- Installer: artifacts/releases/0.6.0/Folio_0.6.0_x64-setup.exe (57,307,532 bytes). SHA256: 677a239a338cf39d50282c50a63ce4fb119bf014db48a705fb16848639fad3d6.
+- Certificates in automated evidence are explicitly synthetic. Revocation/trusted timestamp guarantees, broader real-world signatures and visible certificate appearances remain pending. No actual private identity was inspected or generated for the user.
+
+Next: archival conversion plus independent conformance validation with free local tools. Official Ghostscript 10.08.0, 7-Zip 26.04 MSI and Temurin 21.0.12.1 JRE downloads have pinned SHA256 verification; not yet extracted/configured. Full goal stays active.

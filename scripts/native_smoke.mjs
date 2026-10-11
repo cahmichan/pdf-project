@@ -66,8 +66,18 @@ try {
   if(!imported.page_count)throw new Error('Native Office import returned no PDF pages.');
   const batch=await page.evaluate(async input=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request:{command:'batch_run',args:{preset:'handout',paths:[input.fixture],folder:input.folder}}}),{fixture,folder:path.join(root,'artifacts','native-smoke','batch')});
   if(batch.items[0].status!=='done')throw new Error(`Native batch failed: ${JSON.stringify(batch)}`);
+  const signing=await page.evaluate(async input=>{
+    const invoke=request=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request});
+    const doc=await invoke({command:'open',args:{path:input.fixture}});
+    await invoke({command:'create_identity',args:{path:input.identity,name:'Native synthetic identity',password:'Synthetic-native-only-123'}});
+    const signed=await invoke({command:'sign_copy',session:doc.id,revision:doc.revision,args:{identity:input.identity,password:'Synthetic-native-only-123',path:input.output,overwrite:true}});
+    const opened=await invoke({command:'open',args:{path:signed.path}});
+    return invoke({command:'inspect_signatures',session:opened.id});
+  },{fixture,identity:path.join(receiptPath,`synthetic-${Date.now()}.pfx`),output:path.join(receiptPath,'signed.pdf')});
+  const signature=signing.signatures[0];
+  if(!signature?.intact||!signature.valid||signature.trusted)throw new Error(`Native offline signature failed: ${JSON.stringify(signing)}`);
   const digest=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
+  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
   if(errors.length)throw new Error(JSON.stringify(errors));
   fs.writeFileSync(path.join(receiptPath,'receipt.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 } finally {

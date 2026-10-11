@@ -50,6 +50,13 @@ try:
     batch=command({'command':'batch_run','args':{'preset':preset['id'],'paths':[str(root/'artifacts'/'fixtures'/'sample.pdf')],'folder':str(output/'batch')}})
     assert batch['items'][0]['status']=='done'
     receipt['saved_preset_batch']=True
+    import uuid
+    identity=output/f'synthetic-{uuid.uuid4().hex}.pfx'
+    command({'command':'create_identity','args':{'path':str(identity),'name':'Packaged synthetic identity','password':'Synthetic-smoke-only-123'}})
+    signed=command({'command':'sign_copy','session':info['id'],'revision':info['revision'],'args':{'identity':str(identity),'password':'Synthetic-smoke-only-123','path':str(output/'signed.pdf'),'overwrite':True}})
+    signature=signed['validation']['signatures'][0]
+    assert signature['intact'] and signature['valid'] and not signature['trusted']
+    receipt['offline_certificate_signing']=True
     (output/'receipt.json').write_text(json.dumps(receipt,indent=2),encoding='utf-8')
     print(json.dumps(receipt,indent=2))
 finally:

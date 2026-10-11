@@ -12,3 +12,7 @@
 
 .ink-preview{position:absolute;inset:0;pointer-events:none;z-index:5}
 .selection-surface{touch-action:none}
+
+.signature-dialog{width:min(720px,92vw);max-height:88vh;overflow:auto}.signature-dialog p{line-height:1.5}.signature-dialog>button{margin:8px 8px 8px 0}.signature-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.signature-results article{padding:16px;border:1px solid var(--border);border-radius:10px;margin:14px 0}.signature-results small{display:block;margin-top:6px;overflow-wrap:anywhere}.signature-results dl{display:grid;grid-template-columns:2fr 1fr;gap:8px}.signature-results dd{margin:0}.signature-results pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+
+.signature-dialog{gap:12px;padding:24px}.signature-dialog p{margin:4px 0}.signature-dialog>button{margin:0}.signature-dialog .signature-tabs{margin:4px 0;gap:6px}.signature-dialog .section-heading{margin:0}.signature-dialog .signature-results article{margin:8px 0}

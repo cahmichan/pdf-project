@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English OCR model. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.5.0/Folio_0.5.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview native worker cancellation and saved batch workflows.
+Latest verified installer milestone: `artifacts/releases/0.6.0/Folio_0.6.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation and saved batch workflows.
 
 ## Free Office runtime
 
@@ -25,3 +25,9 @@ Printing and scanner hardware acceptance remain pending. No printer/scanner oper
 ## Recovery files
 
 Folio retains private revision copies and OCR text under its Tauri app-data directory, normally `%APPDATA%\personal.folio.pdf`. Encrypted PDFs are decrypted into private working copies after a correct password. Original documents are kept unchanged. Closing a document tab does not erase its recovery session.
+
+## Personal certificates
+
+Under Protect, choose Sign with certificate. Use a local PKCS#12 .pfx/.p12 identity or create an encrypted self-signed personal identity. Save a separate signed PDF and reopen it to inspect signed bytes, cryptographic validity and trust separately. The initial certificate signature is invisible; a signature graphic can be placed before signing.
+
+Export the public certificate when you need an explicit trust certificate. It contains no private key. Folio does not change Windows trust stores. Keep the private identity file and its password safe; Folio clears passwords after each operation and does not remember them. Offline inspection does not establish current revocation status or a trusted signing time. Self-signed certificates are not automatically trusted in other readers.
