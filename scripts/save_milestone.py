@@ -5,6 +5,8 @@ from pathlib import Path
 import shutil
 import subprocess
 root=Path(__file__).resolve().parents[1]
+status=subprocess.run(['git','status','--porcelain'],cwd=root,capture_output=True,text=True,check=True)
+assert not status.stdout.strip(), 'Commit the verified source before saving a milestone checkpoint'
 version=json.loads((root/'package.json').read_text(encoding='utf-8'))['version']
 release=root/'artifacts'/'releases'/version
 evidence=release/'verification';evidence.mkdir(parents=True,exist_ok=True)

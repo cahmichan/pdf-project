@@ -58,6 +58,13 @@ try:
     batch=command({'command':'batch_run','args':{'preset':preset['id'],'paths':[str(root/'artifacts'/'fixtures'/'sample.pdf')],'folder':str(output/'batch')}})
     assert batch['items'][0]['status']=='done'
     receipt['saved_preset_batch']=True
+    organized=command({'command':'apply','session':info['id'],'revision':info['revision'],'args':{'operation':'reorder','pages':[1,1,3]}})
+    with pdf.open(organized['path']) as checked:assert checked.page_xref(0)!=checked.page_xref(1)
+    parts=command({'command':'split','session':organized['id'],'revision':organized['revision'],'args':{'mode':'ranges','ranges':'3,1;1,1','folder':str(output/'split')}})
+    assert all(item['status']=='done' for item in parts['items'])
+    with pdf.open(parts['items'][1]['output']) as checked:assert len(checked)==2 and checked.page_xref(0)!=checked.page_xref(1)
+    info=command({'command':'undo','session':organized['id'],'revision':organized['revision']})
+    receipt['independent_page_copies_and_split']=True
     import uuid
     identity=output/f'synthetic-{uuid.uuid4().hex}.pfx'
     command({'command':'create_identity','args':{'path':str(identity),'name':'Packaged synthetic identity','password':'Synthetic-smoke-only-123'}})

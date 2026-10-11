@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English OCR model. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.7.0/Folio_0.7.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
+Latest verified installer milestone: `artifacts/releases/0.8.0/Folio_0.8.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
 
 ## Free Office runtime
 
@@ -37,3 +37,9 @@ Export the public certificate when you need an explicit trust certificate. It co
 Run `.\.venv\Scripts\python.exe scripts/setup_archival.py` from the project folder. This downloads verified Ghostscript, a project-local free Temurin JRE, 7-Zip and veraPDF. It extracts files under tools, verifies veraPDF's detached publisher signature with Git's GPG, and records runtime paths in Folio's settings. It does not register an application, change system PATH, or require Oracle Java. Keep the configured project folder available; the large tools are separate from the core installer.
 
 Under Convert, Archival PDF/A-2b exports the whole document as a separate static copy, then requires an independent veraPDF pass. Forms/annotations are flattened and links/attachments are removed. Review text, colors and layout. Check PDF/A-2b inspects the current working copy and can save the full XML report. Other PDF/A conformance levels are not implemented.
+
+## Organize and split pages
+
+Open a PDF, select Pages, and choose Organize pages visually. Drag thumbnails or use Move left/right, Duplicate selected, and Remove selected. Cancel discards staged changes. Apply page order makes one undoable working revision; save a separate copy when ready. Copied form fields receive unique names, and copied internal links target the first retained copy of their destination.
+
+For multiple output files, select Split into separate PDFs and Choose split method. Choose one file per page, a fixed page count per file, or custom groups such as `1-3;4-6;7,9`. Select an output folder and save. Each output gets a unique filename; the working document does not change. A JSON receipt records completed or failed files. Interrupted receipts also appear in Batch tools under Recent batch jobs. Keep completed outputs if a job is interrupted; rerunning creates new files.

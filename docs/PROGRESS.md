@@ -126,3 +126,20 @@ Next: archival conversion plus independent conformance validation with free loca
 - Manual native dialogs/installed UI/physical print/scanner and unusual real documents remain acceptance gates.
 
 Next preservation fix: a direct source probe found doc.select with duplicate page numbers shares page objects/widgets. An edit can affect another duplicate. Independent-copy insertion plus unique copied field names preserves separate editing; links/bookmarks need explicit fixtures before release. This is a known limitation of the 0.7.0 duplicate workflow until fixed. Continue with visual page organization and split tools after the preservation fix. Full goal remains active.
+
+## 0.8.0 page organization candidate
+
+- Fixed shared-object duplication: inserted copies have independent page objects and uniquely named copied form fields. Original links/bookmarks retain destination references; copied internal links target the first retained destination copy. Cropped/rotated links preserve their PDF rectangle and destination coordinates.
+- Added thumbnail organizer with drag movement, accessible move controls, staged duplicate/remove/reset/cancel and one undoable Apply. Browser independent-copy edit/save/reopen passed.
+- Added split exports: individual pages, fixed-size groups and custom semicolon-separated ranges. All ranges validate before any outputs; filenames are unique, output PDFs are reopened before publication, and per-file receipts preserve failures/interrupted jobs. Working revision and originals remain intact.
+- Core candidate suite: 51 passed, including four duplication orders, eight cropped/rotated duplication/extraction cases and five split grouping/rollback/recovery cases. Independent PDFium rendering used. Full browser/package/native gates pending. Latest fully verified installer remains 0.7.0.
+
+## 0.8.0 verified milestone
+
+- All 65 Python tests and 10 browser UI tests passed (47.7s). Frozen worker passed independent page-copy/split checks plus OCR/Office/batch/signatures/archival with developer Python absent from PATH. Frontend/Rust/NSIS packaging passed.
+- Actual bundled WebView2 smoke passed visual organizer apply/undo and split/reopen alongside all prior smoke workflows, with no captured page errors. Organizer and split screenshots visually inspected.
+- Installer: artifacts/releases/0.8.0/Folio_0.8.0_x64-setup.exe (57,322,245 bytes). SHA256: 624fab20b0d7c572889360a8120987cea8d5d474581e57317a009a7b5d597c8b.
+- This milestone fixes the shared-object duplicate-page limitation of 0.7.0. Duplicate links point at the first retained destination copy; copied form names are distinct. Complex shared/radio fields and named destinations need broader compatibility fixtures.
+- Physical print/scanner, native file dialogs, installed UI and unusual personal PDFs remain manual acceptance gates. No personal documents or hardware jobs were used.
+
+Next: exact visual crop controls and page-number/watermark customization, then remaining form/font/conversion/OCR/scanner/local-model work in the original roadmap. The full goal remains active; this milestone does not establish full feature parity.

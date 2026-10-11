@@ -61,6 +61,42 @@ def test_revision_rotate_undo_redo_recovery(fixture):
     assert fingerprint(source)==baseline
 
 
+@pytest.mark.parametrize('rotation',[0,90,180,270])
+@pytest.mark.parametrize('mode',['reorder','extract'])
+def test_copied_rotated_cropped_page_links_and_rendering(fixture,tmp_path,rotation,mode):
+    engine,session,source=fixture
+    linked=tmp_path/'rotated-links.pdf'
+    with pdf.open(source) as doc:
+        for page in doc:
+            page.set_cropbox(pdf.Rect(20,20,380,480));page.set_rotation(rotation)
+        doc[0].insert_link({'kind':pdf.LINK_GOTO,'from':pdf.Rect(40,230,140,255),'page':2,'to':pdf.Point(70,110)})
+        doc[0].insert_link({'kind':pdf.LINK_URI,'from':pdf.Rect(40,260,140,285),'uri':'https://example.org/'})
+        doc.save(linked)
+    baseline=fingerprint(linked)
+    with pdf.open(linked) as doc:
+        expected=doc[0].get_links();dimensions=list(doc[0].rect)
+    session=engine.dispatch({'command':'open','args':{'path':str(linked)}})
+    if mode=='reorder':
+        session=apply(engine,session,'reorder',pages=[1,1,3]);output=session['path']
+    else:
+        output=str(tmp_path/'extracted-copies.pdf')
+        engine.dispatch({'command':'export','session':session['id'],'args':{'path':output,'mode':'extract','pages':[1,1,3]}})
+    with pdf.open(output) as doc:
+        assert doc.page_xref(0)!=doc.page_xref(1)
+        for index in (0,1):
+            assert list(doc[index].rect)==pytest.approx(dimensions)
+            links=doc[index].get_links();assert len(links)==2
+            for found,wanted in zip(links,expected):
+                assert list(found['from'])==pytest.approx(list(wanted['from']),abs=.01)
+                if found['kind']==pdf.LINK_GOTO:
+                    assert found['page']==2
+                    assert list(found['to'])==pytest.approx(list(wanted['to']),abs=.01)
+                else:assert found['uri']==wanted['uri']
+    with pdfium.PdfDocument(output) as independent:
+        assert independent[0].render(scale=1).to_pil().tobytes()==independent[1].render(scale=1).to_pil().tobytes()
+    assert fingerprint(linked)==baseline
+
+
 def test_failed_edit_is_transactional(fixture):
     engine,session,source=fixture
     with pytest.raises(PDFError,match='at least one'):
@@ -368,3 +404,93 @@ def test_ink_rejects_invalid_points_without_revision(fixture):
     for strokes in ([[[-5,2],[10,20]]],[[[1,2],[float('nan'),3]]],[[[1,2]]]):
         with pytest.raises(PDFError):apply(engine,session,'ink',strokes=strokes)
         assert engine.dispatch({'command':'info','session':session['id']})['revision']==session['revision']
+
+
+@pytest.mark.parametrize('settings,groups',[
+    ({'mode':'individual'},[[1],[2],[3]]),
+    ({'mode':'every','size':2},[[1,2],[3]]),
+    ({'mode':'ranges','ranges':'3,1;1,1;2-3'},[[3,1],[1,1],[2,3]])])
+def test_split_groups_outputs_receipt_and_source_preservation(fixture,tmp_path,settings,groups):
+    engine,session,source=fixture;baseline=fingerprint(source)
+    def run():return engine.dispatch({'command':'split','session':session['id'],'revision':session['revision'],'args':{**settings,'folder':str(tmp_path/'parts')}})
+    result=run();assert [item['pages'] for item in result['items']]==groups
+    assert result['status']=='finished'
+    assert json.loads(Path(result['manifest']).read_text(encoding='utf-8'))==result
+    for item in result['items']:
+        assert item['status']=='done'
+        with pdf.open(item['output']) as doc:
+            assert len(doc)==len(item['pages'])
+            assert len(set(doc.page_xref(index) for index in range(len(doc))))==len(doc)
+            for page,number in zip(doc,item['pages']):assert f'Page {number} fixture' in page.get_text()
+        with pdfium.PdfDocument(item['output']) as doc:
+            assert len(doc)==len(item['pages']);assert doc[0].render(scale=.5).width==200
+    again=run();assert not {item['output'] for item in result['items']} & {item['output'] for item in again['items']}
+    assert fingerprint(source)==baseline
+    assert engine.dispatch({'command':'info','session':session['id']})['revision']==session['revision']
+
+
+def test_split_invalid_groups_and_stale_revision_create_no_outputs(fixture,tmp_path):
+    engine,session,source=fixture;folder=tmp_path/'invalid-parts'
+    for settings in ({'mode':'every','size':0},{'mode':'every','size':1.5},{'mode':'ranges','ranges':'1;9'}, {'mode':'ranges','ranges':'1;'}, {'mode':'unknown'}):
+        with pytest.raises(PDFError):engine.dispatch({'command':'split','session':session['id'],'revision':session['revision'],'args':{**settings,'folder':str(folder)}})
+        assert not folder.exists()
+    changed=apply(engine,session,'rotate',pages='1')
+    with pytest.raises(PDFError):engine.dispatch({'command':'split','session':changed['id'],'revision':session['revision'],'args':{'folder':str(folder)}})
+    assert not folder.exists()
+
+
+def test_split_failure_receipt_and_interrupted_history(fixture,tmp_path,monkeypatch):
+    from workflows import history
+    engine,session,source=fixture;export=engine.export;calls=0
+    def failing(current,args):
+        nonlocal calls
+        calls+=1
+        if calls==2:raise PDFError('Synthetic second-file failure')
+        return export(current,args)
+    monkeypatch.setattr(engine,'export',failing)
+    request={'command':'split','session':session['id'],'revision':session['revision'],'args':{'folder':str(tmp_path/'partial')}}
+    result=engine.dispatch(request)
+    assert [item['status'] for item in result['items']]==['done','failed','done']
+    assert result['items'][1]['error']=='Synthetic second-file failure'
+    assert json.loads(Path(result['manifest']).read_text(encoding='utf-8'))==result
+    calls=0
+    def interrupted(current,args):
+        nonlocal calls
+        calls+=1
+        if calls==2:raise KeyboardInterrupt()
+        return export(current,args)
+    monkeypatch.setattr(engine,'export',interrupted)
+    with pytest.raises(KeyboardInterrupt):engine.dispatch(request)
+    jobs=history(engine.root)
+    stopped=next(job for job in jobs if job['status']=='interrupted')
+    assert stopped['items'][0]['status']=='done' and Path(stopped['items'][0]['output']).is_file()
+    assert stopped['items'][1]['status']=='running'
+
+@pytest.mark.parametrize('order',[[1,1,3],[3,1,1],[1,3,1],[1,1,1,3]])
+def test_duplicate_pages_edit_independently_and_preserve_links_forms_bookmarks(fixture,order):
+    engine,session,source=fixture;baseline=fingerprint(source)
+    # Add a link to page 3 so both retained and copied links can be checked.
+    with pdf.open(source) as original:
+        original[0].insert_link({'kind':pdf.LINK_GOTO,'from':pdf.Rect(40,250,150,280),'page':2,'to':pdf.Point(40,80)})
+        linked=source.parent/'linked.pdf';original.save(linked)
+    session=engine.dispatch({'command':'open','args':{'path':str(linked)}})
+    session=apply(engine,session,'reorder',pages=order)
+    indices=[i for i,n in enumerate(order) if n==1];first,copy=indices[0],indices[-1]
+    with pdf.open(session['path']) as doc:
+        assert len(set(doc.page_xref(n) for n in range(len(doc))))==len(doc)
+        assert [link['page'] for link in doc[first].get_links()]==[order.index(3)]
+        assert [link['page'] for link in doc[copy].get_links()]==[order.index(3)]
+        assert dict((entry[1],entry[2]) for entry in doc.get_toc())['Finish']==order.index(3)+1
+        fields=[[w.field_name for w in p.widgets() or []] for p in doc]
+        assert fields[first]==['FullName'] and fields[copy]==[f'FullName_copy{len(indices)-1}']
+        copied_field=list(doc[copy].widgets())[0].xref
+    session=apply(engine,session,'add_text',page=copy+1,rect=[40,320,280,355],text='Independent copied page')
+    session=apply(engine,session,'fill_forms',values={str(copied_field):'Copied person'})
+    with pdf.open(session['path']) as doc:
+        assert 'Independent copied page' not in doc[first].get_text()
+        assert 'Independent copied page' in doc[copy].get_text()
+        assert [w.field_value for w in doc[first].widgets() or []]==['Initial']
+        assert [w.field_value for w in doc[copy].widgets() or []]==['Copied person']
+    undone=engine.dispatch({'command':'undo','session':session['id'],'revision':session['revision']})
+    with pdf.open(undone['path']) as doc:assert [w.field_value for w in doc[copy].widgets() or []]==['Initial']
+    assert fingerprint(source)==baseline

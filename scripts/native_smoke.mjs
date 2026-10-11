@@ -31,6 +31,17 @@ try {
   await page.waitForFunction(()=>{const button=Array.from(document.querySelectorAll('button')).find(button=>button.textContent==='Open print dialog');return button&&!button.disabled;});
   await page.screenshot({path:path.join(receiptPath,'print-preview.png')});
   await page.getByRole('button',{name:'Close preview',exact:true}).click();
+  await page.locator('.mode-bar').getByRole('button',{name:'Pages',exact:true}).click();
+  await page.getByRole('button',{name:'Organize pages visually'}).click();
+  const organizer=page.getByRole('dialog',{name:'Organize pages',exact:true});
+  await organizer.getByRole('button',{name:'Duplicate selected'}).click();
+  await page.screenshot({path:path.join(receiptPath,'organizer.png')});
+  await organizer.getByRole('button',{name:'Apply page order'}).click();
+  await organizer.waitFor({state:'hidden'});
+  await page.waitForFunction(()=>document.querySelectorAll('.page-item').length===4);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelectorAll('.page-item').length===3);
+  await page.locator('.page-loading').waitFor({state:'hidden'});
   await page.getByRole('button',{name:'Edit',exact:true}).click();
   await page.getByLabel('Text',{exact:true}).fill('Native WebView2 verified');
   const paper=await page.locator('.paper').boundingBox();
@@ -82,8 +93,16 @@ try {
     return invoke({command:'export',session:doc.id,args:{path:input.output,mode:'pdfa_2b',overwrite:true}});
   },{fixture,output:path.join(receiptPath,'archival.pdf')});
   if(!archival.validation?.compliant||archival.validation.failed_rules)throw new Error(`Native archival validation failed: ${JSON.stringify(archival)}`);
+  const split=await page.evaluate(async input=>{
+    const invoke=request=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request});
+    const doc=await invoke({command:'open',args:{path:input.fixture}});
+    const result=await invoke({command:'split',session:doc.id,revision:doc.revision,args:{mode:'ranges',ranges:'3,1;1,1',folder:input.folder}});
+    for(const item of result.items){if(item.status!=='done')throw new Error(item.error);const reopened=await invoke({command:'open',args:{path:item.output}});if(reopened.page_count!==2)throw new Error('Split reopen page count mismatch.');}
+    return result;
+  },{fixture,folder:path.join(receiptPath,'split')});
+  if(split.items.length!==2)throw new Error('Native split failed.');
   const digest=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,configured_free_archival_conversion:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
+  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,configured_free_archival_conversion:true,visual_page_organizer:true,split_pdf_reopen:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
   if(errors.length)throw new Error(JSON.stringify(errors));
   fs.writeFileSync(path.join(receiptPath,'receipt.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 } finally {

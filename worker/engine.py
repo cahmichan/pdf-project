@@ -1,6 +1,7 @@
 """Canonical document sessions. All edits create validated immutable revisions."""
 from __future__ import annotations
 import math
+import re
 import hashlib
 import json
 import os
@@ -72,6 +73,60 @@ def rgb(value: Any, default: tuple = (0.12, 0.2, 0.3)) -> tuple:
             raise PDFError('Choose an RGB color.')
         return tuple(int(text[i:i + 2], 16) / 255 for i in (0, 2, 4))
     return tuple(value)
+
+
+def select_independent(doc: pdf.Document, selected: list[int]) -> None:
+    """Keep original page references; create independent objects for duplicates."""
+    unique=list(dict.fromkeys(selected))
+    if len(unique)==len(selected):
+        doc.select(selected)
+        return
+    # The immutable input file stays open and unchanged until commit saves rN.
+    snapshot=pdf.open(doc.name) if doc.name else pdf.open(stream=doc.tobytes(),filetype='pdf')
+    try:
+        doc.select(unique)
+        first={number:selected.index(number) for number in unique}
+        names={w.field_name for page in doc for w in page.widgets() or []}
+        seen=set();copied_links=[]
+        for index,number in enumerate(selected):
+            if number in seen:
+                source_page=snapshot[number]
+                links=source_page.get_links()
+                doc.insert_pdf(snapshot,from_page=number,to_page=number,start_at=index,
+                               widgets=True,annots=True,links=False)
+                page=doc[index]
+                for field in page.widgets() or []:
+                    base=field.field_name;count=1
+                    while f'{base}_copy{count}' in names:count+=1
+                    field.field_name=f'{base}_copy{count}';names.add(field.field_name);field.update()
+                copied_links.append((index,number,links))
+            seen.add(number)
+        for index,number,links in copied_links:
+            page=doc[index];source_page=snapshot[number]
+            for link in links:
+                value={key:item for key,item in link.items() if key not in ('xref','id')}
+                raw_rect=snapshot.xref_get_key(link['xref'],'Rect')[1]
+                value['from']=pdf.Rect([float(n) for n in raw_rect.strip('[]').split()])*source_page.transformation_matrix
+                if link['kind']==pdf.LINK_GOTO:
+                    target=link.get('page',-1)
+                    if target not in first:continue
+                    value['page']=first[target]
+                    if link.get('to') is not None:value['to']=pdf.Point(link['to'])*snapshot[target].derotation_matrix
+                if link['kind'] in (pdf.LINK_GOTO,pdf.LINK_URI,pdf.LINK_GOTOR,pdf.LINK_LAUNCH,pdf.LINK_NAMED):
+                    previous={item[0] for item in page.annot_xrefs()}
+                    page.insert_link(value)
+                    if link['kind']==pdf.LINK_GOTO:
+                        # Preserve the original PDF destination coordinates exactly.
+                        # Rotated CropBoxes make the high-level round trip lossy.
+                        for key in ('A/D','Dest'):
+                            kind,destination=snapshot.xref_get_key(link['xref'],key)
+                            if kind=='array' and re.match(r'\[\s*\d+\s+\d+\s+R',destination):
+                                destination=re.sub(r'(?<=\[)\s*\d+\s+\d+\s+R',f'{doc.page_xref(first[link["page"]])} 0 R',destination,count=1)
+                                added=next(item[0] for item in page.annot_xrefs() if item[0] not in previous)
+                                doc.xref_set_key(added,'A/D',destination)
+                                break
+    finally:
+        snapshot.close()
 
 
 def place_text(page: pdf.Page, rect: pdf.Rect, text: str, size: float, color: tuple = (0,0,0), rotation: int = 0) -> float:
@@ -215,7 +270,7 @@ class Engine:
                 for n in selected:
                     doc[n].set_rotation((doc[n].rotation + int(args.get('degrees', 90))) % 360)
             elif operation == 'reorder':
-                doc.select(selected)
+                select_independent(doc,selected)
             elif operation == 'delete_pages':
                 keep = [n for n in range(len(doc)) if n not in selected]
                 if not keep:
@@ -475,7 +530,7 @@ class Engine:
                     raise PDFError('This PDF has signature fields. Confirm exporting a rewritten copy; existing signatures may become invalid.')
                 if mode in ('pdf', 'extract', 'compress', 'compress_screen', 'compress_print', 'protect', 'unlock', 'repair'):
                     if mode == 'extract':
-                        doc.select(selected)
+                        select_independent(doc,selected)
                     if mode.startswith('compress_'):
                         target, quality = (100, 65) if mode == 'compress_screen' else (200, 85)
                         doc.rewrite_images(dpi_threshold=int(target*1.25), dpi_target=target, quality=quality, bitonal=False)
@@ -705,6 +760,10 @@ class Engine:
             return self.info(session)
         if command == 'export':
             return self.export(session,args)
+        if command == 'split':
+            self.check_revision(session,request)
+            from splitting import split
+            return split(self,session,args)
         if command == 'export_images':
             return self.export_images(session,args)
         if command == 'prepare_print':
