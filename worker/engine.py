@@ -248,7 +248,7 @@ class Engine:
                     else:
                         y = page.rect.height / 2 - size
                         rect = pdf.Rect(24, y, page.rect.width - 24, y + size * 2)
-                    if page.insert_textbox(rect, text, fontsize=size, align=1, color=rgb(args.get('color')), fill_opacity=float(args.get('opacity', .3 if operation == 'watermark' else 1))) < 0:
+                    if page.insert_textbox(rect*page.derotation_matrix, text, fontsize=size, align=1, rotate=page.rotation, color=rgb(args.get('color')), fill_opacity=float(args.get('opacity', .3 if operation == 'watermark' else 1))) < 0:
                         raise PDFError('Text does not fit. Reduce the font size.')
             elif operation == 'fill_forms':
                 values = args['values']
@@ -431,6 +431,8 @@ class Engine:
         try:
             with pdf.open(self.current(session)) as doc:
                 selected = pages_arg(args.get('pages'), len(doc))
+                if doc.get_sigflags()>0 and mode in ('extract','compress','compress_screen','compress_print','protect','unlock','repair') and not args.get('allow_signature_changes'):
+                    raise PDFError('This PDF has signature fields. Confirm exporting a rewritten copy; existing signatures may become invalid.')
                 if mode in ('pdf', 'extract', 'compress', 'compress_screen', 'compress_print', 'protect', 'unlock', 'repair'):
                     if mode == 'extract':
                         doc.select(selected)
@@ -556,6 +558,13 @@ class Engine:
         command = request['command']; args = request.get('args', {})
         if command == 'startup':
             return None
+        if command.startswith('preset_') or command.startswith('batch_'):
+            from workflows import list_presets,save_preset,delete_preset,run_batch,history
+            if command=='preset_list':return list_presets(self.root)
+            if command=='preset_save':return save_preset(self.root,args)
+            if command=='preset_delete':delete_preset(self.root,args['id']);return None
+            if command=='batch_run':return run_batch(self,args)
+            if command=='batch_history':return history(self.root)
         if command == 'open':
             return self.open_file(args)
         if command == 'create':

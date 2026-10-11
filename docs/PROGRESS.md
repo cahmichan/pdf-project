@@ -60,3 +60,21 @@ Next: finish updated UI/native/installer verification; continue free Office impo
 - A separate shaping experiment rendered Chinese and Arabic with the free engine. Chinese extraction was correct; Arabic extraction included incorrect mapped/presentation characters. Extended-script editing is still unsupported until search/copy quality passes. Do not turn visual rendering alone into acceptance.
 
 Next independent implementation: saved workflows and batch jobs, then remaining annotation/form/conversion/signature/archival tools. Goal stays active.
+
+## 0.4.0 workflow candidate
+
+- Added preset creation/deletion, built-in searchable-scan/numbered-handout/smaller-PDF presets, sequential multi-file processing, unique output names, per-file failure continuation, durable batch receipts and interrupted-job history.
+- Presets support rotation, crop, numbering, watermark, OCR, metadata and form flattening plus supported export formats. Passwords/file-execution arguments cannot be persisted as preset settings.
+- Batch operations skip signature-field PDFs that would be edited/rewritten. Individual rewritten PDF exports now require explicit signature-change confirmation; exact-byte plain PDF copies preserve signatures.
+- Fixed rotated-page numbers/watermarks. Tests cover footer placement at 90/180/270 degrees.
+- Current core/workflow suite: 32 passing tests; full suite includes 4 real Office tests. All 5 browser UI tests passed before the final singular-label correction; batch screenshot visually inspected.
+- Version 0.4.0 packaging and native batch verification are next. Latest fully verified installer remains 0.3.0, source checkpoint e8ceef6c14838a45b136aaad205e2500d5aef082. Its evidence is preserved under artifacts/releases/0.3.0/verification.
+
+## 0.4.0 verified native milestone
+
+- Full package gate passed: 36 Python tests, frozen-worker OCR/Office/batch smoke, frontend/Rust release and NSIS installer. All 5 browser UI tests passed (18.46s, no failures or skips).
+- Actual native WebView2 smoke passed render/edit/internal link/print preview/cancellation/reconnection/Office import and batch processing, with no captured page errors.
+- Installer: artifacts/releases/0.4.0/Folio_0.4.0_x64-setup.exe (49,635,918 bytes). SHA256: 9e0dde815ab08c424afdee8a9a86c4b9d3b3425acb9944bac6db612f86defea6.
+- Installer UI, physical printing/scanning and unusual real documents remain manual gates.
+
+Next: ink/stamp annotation tools and remaining feature tracker items. Full goal remains active.

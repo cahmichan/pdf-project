@@ -46,6 +46,10 @@ try:
         with pdf.open(converted['path']) as checked:
             assert '31415' in checked[0].get_text()
         receipt['configured_free_office_import']=True
+    preset=command({'command':'preset_save','args':{'name':'Packaged numbered handout','steps':[{'operation':'page_numbers','pages':'all'}],'export':'pdf'}})
+    batch=command({'command':'batch_run','args':{'preset':preset['id'],'paths':[str(root/'artifacts'/'fixtures'/'sample.pdf')],'folder':str(output/'batch')}})
+    assert batch['items'][0]['status']=='done'
+    receipt['saved_preset_batch']=True
     (output/'receipt.json').write_text(json.dumps(receipt,indent=2),encoding='utf-8')
     print(json.dumps(receipt,indent=2))
 finally:

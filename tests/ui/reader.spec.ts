@@ -99,3 +99,27 @@ test('reader link, remembered position, and selected-page print preview',async({
   await expect(page.frameLocator('iframe[title="Document print preview"]').locator('img')).toHaveCount(1);
   await page.screenshot({path:'artifacts/ui/print-preview.png'});
 });
+
+test('create saved preset and batch-export a separate PDF',async({page})=>{
+  const original=fs.readFileSync(fixture);
+  await page.goto('/');
+  await page.getByRole('button',{name:'Batch tools',exact:true}).click();
+  await page.getByRole('button',{name:'Create preset',exact:true}).click();
+  await page.getByLabel('Preset name').fill('UI numbered handout');
+  await page.getByLabel('Step to add').selectOption('page_numbers');
+  await page.getByRole('button',{name:'Add step',exact:true}).click();
+  await page.getByRole('button',{name:'Save preset',exact:true}).click();
+  await page.getByRole('button',{name:'Choose PDFs',exact:true}).click();
+  await page.getByLabel('Absolute local file path').fill(fixture);
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.getByText('1 file selected', {exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Choose output folder',exact:true}).click();
+  const output=path.join(root,'artifacts','fixtures','batch-ui');
+  await page.getByLabel('Absolute output folder').fill(output);
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await page.getByRole('button',{name:'Run batch',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'1 of 1 files saved',exact:true})).toBeVisible();
+  expect(fs.readdirSync(output).some(file=>file.endsWith('.pdf'))).toBeTruthy();
+  expect(fs.readFileSync(fixture).equals(original)).toBeTruthy();
+  await page.screenshot({path:'artifacts/ui/batch.png'});
+});

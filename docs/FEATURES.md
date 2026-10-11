@@ -18,8 +18,8 @@ This is a live implementation tracker, not a parity claim. Evidence is recorded 
 | Office import | Free LibreOffice DOCX/XLSX/PPTX import tested; ODF/RTF/TXT supported by adapter | Broader layout fixtures; configured runtime must remain available |
 | Compare/archival | Positional text/pixel comparison with standalone HTML report | Alignment of inserted/reordered pages, PDF/A conversion and independent validation |
 | Markdown | Plain reading-order text export | Structural heading/table/list preservation |
-| Workflows/scanner | Not implemented yet | Saved recipes, batch jobs, scanner integration |
+| Workflows/scanner | Saved presets, batch jobs, per-file recovery receipts, failure continuation | Scanner integration |
 | Intelligence | Not implemented yet | Free local models, hardware/license evaluation, quality gates |
-| Installer | 0.3.0 installer, bundled OCR, Office adapter and native WebView2/edit/link/preview/cancel smoke passed | Installed UI, actual print/scanner acceptance |
+| Installer | 0.4.0 installer, bundled OCR, Office adapter and native WebView2/edit/link/preview/cancel/batch smoke passed | Installed UI, actual print/scanner acceptance |
 
 No personal files have been used for automated tests. Synthetic fixtures only.

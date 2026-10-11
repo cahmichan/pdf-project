@@ -48,8 +48,10 @@ try {
   if(recovered.revision!==scan.revision)throw new Error('Canceled OCR unexpectedly committed a revision.');
   const imported=await page.evaluate(async fixturePath=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request:{command:'import_office',args:{path:fixturePath}}}),path.join(root,'artifacts','fixtures','office.docx'));
   if(!imported.page_count)throw new Error('Native Office import returned no PDF pages.');
+  const batch=await page.evaluate(async input=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request:{command:'batch_run',args:{preset:'handout',paths:[input.fixture],folder:input.folder}}}),{fixture,folder:path.join(root,'artifacts','native-smoke','batch')});
+  if(batch.items[0].status!=='done')throw new Error(`Native batch failed: ${JSON.stringify(batch)}`);
   const digest=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
+  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
   if(errors.length)throw new Error(JSON.stringify(errors));
   fs.writeFileSync(path.join(receiptPath,'receipt.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 } finally {

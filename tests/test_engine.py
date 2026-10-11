@@ -317,3 +317,15 @@ def test_redaction_and_added_text_use_visual_rotated_coordinates(fixture,rotatio
         text=doc[0].get_textpage().get_text_range()
         assert 'SecretData' not in text
         assert 'Visual coordinates verified' in text
+
+
+@pytest.mark.parametrize('rotation',[90,180,270])
+def test_page_numbers_on_rotated_pages_have_visual_footer_position(fixture,rotation):
+    engine,session,_=fixture
+    changed=apply(engine,session,'rotate',pages='1',degrees=rotation)
+    changed=apply(engine,changed,'page_numbers',pages='1',start=9001)
+    with pdf.open(changed['path']) as doc:
+        page=doc[0];bounds=page.search_for('9001')[0]*page.rotation_matrix
+        assert bounds.y0>page.rect.height-40
+    with pdfium.PdfDocument(changed['path']) as independent:
+        assert '9001' in independent[0].get_textpage().get_text_range()
