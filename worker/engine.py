@@ -95,10 +95,19 @@ def select_independent(doc: pdf.Document, selected: list[int]) -> None:
                 doc.insert_pdf(snapshot,from_page=number,to_page=number,start_at=index,
                                widgets=True,annots=True,links=False)
                 page=doc[index]
+                radio_parents=set()
                 for field in page.widgets() or []:
+                    parent_kind,parent_value=doc.xref_get_key(field.xref,'Parent')
+                    radio_parent=int(parent_value.split()[0]) if field.field_type==pdf.PDF_WIDGET_TYPE_RADIOBUTTON and parent_kind=='xref' else None
+                    if radio_parent in radio_parents:continue
                     base=field.field_name;count=1
                     while f'{base}_copy{count}' in names:count+=1
-                    field.field_name=f'{base}_copy{count}';names.add(field.field_name);field.update()
+                    new_name=f'{base}_copy{count}';names.add(new_name)
+                    if radio_parent is not None:
+                        leaf=doc.xref_get_key(radio_parent,'T')[1]
+                        doc.xref_set_key(radio_parent,'T',pdf.get_pdf_str(f'{leaf}_copy{count}'));radio_parents.add(radio_parent)
+                    else:
+                        field.field_name=new_name;field.update()
                 copied_links.append((index,number,links))
             seen.add(number)
         for index,number,links in copied_links:
@@ -303,8 +312,11 @@ class Engine:
                                 raise PDFError(f'Conflicting values for shared field {field.field_name}.')
                             shared[field.field_name]=values[identifier]
                 if set(values)-known:raise PDFError('Form fields changed. Review the current fields before applying values.')
+                from radio import fill_groups
+                radio_ids=fill_groups(doc,values)
                 for page in doc:
                     for field in page.widgets() or []:
+                        if str(field.xref) in radio_ids:continue
                         if str(field.xref) in values or (field.field_type in synchronized and field.field_name in shared):
                             value=shared[field.field_name] if field.field_type in synchronized and field.field_name in shared else values[str(field.xref)]
                             if value==field.field_value:continue
@@ -469,12 +481,18 @@ class Engine:
                     doc.scrub(attached_files=True, clean_pages=True, embedded_files=True, hidden_text=True,
                               javascript=True, metadata=True, redactions=True, remove_links=True,
                               reset_fields=True, reset_responses=True, thumbnails=True, xml_metadata=True)
+                elif operation == 'add_radio':
+                    from radio import create_group
+                    create_group(doc,page,args)
                 elif operation == 'add_form':
                     widget = pdf.Widget(); widget.rect = rect
                     widget.field_name = args.get('name', f'field_{uuid.uuid4().hex[:8]}')
                     if any(w.field_name == widget.field_name for p in doc for w in p.widgets() or []):
                         raise PDFError('A form field already uses that name.')
                     kind = args.get('field_type','text')
+                    if kind=='radio':
+                        from radio import create_group
+                        return create_group(doc,page,args)
                     types = {'text':pdf.PDF_WIDGET_TYPE_TEXT,'checkbox':pdf.PDF_WIDGET_TYPE_CHECKBOX,'combo':pdf.PDF_WIDGET_TYPE_COMBOBOX,'list':pdf.PDF_WIDGET_TYPE_LISTBOX}
                     if kind not in types:
                         raise PDFError('Unsupported form field type.')
@@ -486,6 +504,7 @@ class Engine:
                         widget.field_value = widget.choice_values[0]
                     else:
                         widget.field_value = False if kind == 'checkbox' else args.get('text', '')
+                    widget.text_color=rgb(args.get('color'))
                     widget.text_fontsize = float(args.get('size', 12))
                     page.add_widget(widget)
                 else:
@@ -508,7 +527,7 @@ class Engine:
                                'multiline':bool(w.field_flags & pdf.PDF_TX_FIELD_IS_MULTILINE),
                                'password':bool(w.field_flags & pdf.PDF_TX_FIELD_IS_PASSWORD),
                                'multi_select':bool(w.field_flags & pdf.PDF_CH_FIELD_IS_MULTI_SELECT),
-                               'max_length':w.text_maxlen, 'choices':w.choice_values, 'states':w.button_states()} for w in page.widgets() or []],
+                               'max_length':w.text_maxlen,'label':w.field_label if w.field_type!=pdf.PDF_WIDGET_TYPE_RADIOBUTTON or doc.xref_get_key(w.xref,'TU')[0]=='string' else w.on_state(),'on_state':w.on_state(), 'choices':w.choice_values, 'states':w.button_states()} for w in page.widgets() or []],
                     'annotations': [{'id': a.xref, 'type': a.type[1], 'rect': list(a.rect), 'content': a.info.get('content','')}
                                     for a in page.annots() or []],
                     'images': [{'id':item['xref'],'rect':list(item['bbox']),'width':item['width'],'height':item['height']} for item in page.get_image_info(xrefs=True) if item['xref']],

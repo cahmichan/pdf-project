@@ -23,6 +23,7 @@ test('home, PDF render, search, edit, history, and safe export',async({page})=>{
   await expect(page.locator('.search-hit')).toHaveCount(3);
   await page.getByRole('button',{name:'Edit',exact:true}).click();
   await page.getByLabel('Text',{exact:true}).fill('Added by interface test');
+  await expect(page.locator('.page-loading')).toBeHidden();
   const paper=await page.locator('.paper').boundingBox();
   if(!paper)throw new Error('Missing page canvas');
   await page.mouse.move(paper.x+45,paper.y+320);
@@ -133,6 +134,7 @@ test('freehand ink and stamp persist as removable PDF annotations',async({page})
   await expect(page.locator('.textLayer')).toContainText('Folio sample');
   await page.getByRole('button',{name:'Annotate',exact:true}).click();
   await page.getByLabel('Tool',{exact:true}).selectOption('ink');
+  await expect(page.locator('.page-loading')).toBeHidden();
   let paper=await page.locator('.paper').boundingBox();if(!paper)throw new Error('Missing paper');
   await page.mouse.move(paper.x+60,paper.y+300);await page.mouse.down();
   await page.mouse.move(paper.x+120,paper.y+320,{steps:6});
@@ -146,6 +148,7 @@ test('freehand ink and stamp persist as removable PDF annotations',async({page})
   await expect(page.getByLabel('Annotation',{exact:true}).locator('option')).toContainText(['Choose an annotation','Ink']);
   await page.getByLabel('Tool',{exact:true}).selectOption('stamp');
   await page.getByLabel('Stamp',{exact:true}).selectOption('approved');
+  await expect(page.locator('.page-loading')).toBeHidden();
   paper=await page.locator('.paper').boundingBox();if(!paper)throw new Error('Missing paper');
   await page.mouse.move(paper.x+70,paper.y+400);await page.mouse.down();
   await page.mouse.move(paper.x+300,paper.y+470,{steps:6});await page.mouse.up();
@@ -277,7 +280,8 @@ test('visual organizer stages, cancels, moves and creates independently editable
   await expect(page.locator('.textLayer')).toContainText('Folio sample document - page 1');
   await page.getByRole('button',{name:'Edit',exact:true}).click();
   await page.getByLabel('Text',{exact:true}).fill('Independent UI duplicate');
-  await expect(page.locator('.render-state')).toBeHidden();
+  await expect(page.locator('.page-loading')).toBeHidden();
+  await expect(page.locator('.page-loading')).toBeHidden();
   const paper=await page.locator('.paper').boundingBox();if(!paper)throw new Error('Missing PDF page');
   await page.mouse.move(paper.x+40,paper.y+300);await page.mouse.down();await page.mouse.move(paper.x+330,paper.y+345);await page.mouse.up();
   await page.getByRole('button',{name:'Apply to working copy'}).click();
@@ -350,7 +354,8 @@ test('on-page forms fill text, notes, checkbox and choices at every rotation',as
   await page.getByRole('button',{name:'Forms',exact:true}).click();
   for(const [index,rotation] of [0,90,180,270].entries()){
     await page.locator('.page-item').nth(index).click();const name=page.getByLabel(`On-page Name ${rotation}`,{exact:true});await expect(name).toBeVisible();await expect(name).toHaveAttribute('maxlength','8');
-    const paper=await page.locator('.paper').boundingBox();const bounds=await name.boundingBox();if(!paper||!bounds)throw new Error('No form bounds');
+    await expect(page.locator('.page-loading')).toBeHidden();
+  const paper=await page.locator('.paper').boundingBox();const bounds=await name.boundingBox();if(!paper||!bounds)throw new Error('No form bounds');
     expect(bounds.width).toBeCloseTo(rotation===90||rotation===270?30:140,0);expect(bounds.height).toBeCloseTo(rotation===90||rotation===270?140:30,0);
     await name.fill(`Value${rotation}`);
     await page.getByLabel(`On-page Notes ${rotation}`,{exact:true}).fill('First line\nSecond line');await page.getByLabel(`On-page Consent ${rotation}`,{exact:true}).check();
@@ -391,4 +396,18 @@ test('unusual field names and staged values survive split, image and comparison 
   const recognized=execFileSync(python,['-c','import pymupdf as p,sys;data=p.Pixmap(sys.argv[1]).pdfocr_tobytes(language="eng",tessdata=sys.argv[2]);d=p.open(stream=data,filetype="pdf");print(d[0].get_text());d.close()',image,path.join(root,'tools','tessdata')],{encoding:'utf8'});expect(recognized).toContain('Image draft');
   const before=path.join(folder,'before-comparison.pdf');await saveCopy(before);await page.getByRole('button',{name:'Forms',exact:true}).click();await page.getByLabel('On-page toString',{exact:true}).fill('Compare draft');await page.getByRole('button',{name:'Convert',exact:true}).click();await page.getByLabel('Tool',{exact:true}).selectOption('compare');await page.getByRole('button',{name:'Choose second PDF'}).click();await page.getByLabel('Absolute local file path').fill(before);await page.getByRole('button',{name:'Continue',exact:true}).click();dialog=page.getByRole('dialog',{name:'PDF comparison',exact:true});await expect(dialog.getByRole('heading',{name:'1 changed pages',exact:true})).toBeVisible();await dialog.getByRole('button',{name:'Close',exact:true}).click();
   const final=path.join(folder,'after-comparison.pdf');await saveCopy(final);expect(fields(final)['toString']).toBe('Compare draft');expect(fs.readFileSync(source).equals(original)).toBeTruthy();
+});
+
+test('create, select and reopen a real radio group with undo',async({page})=>{
+  const original=fs.readFileSync(fixture);await page.goto('/');await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(fixture);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('.textLayer')).toContainText('Folio sample');
+  await page.getByRole('button',{name:'Forms',exact:true}).click();await page.getByLabel('Tool',{exact:true}).selectOption('add_form');await page.getByLabel('Field type',{exact:true}).selectOption('radio');await page.getByLabel('Unique field name').fill('Preference');await page.getByLabel('Choices, one per line').fill('First option\nSecond option');
+  await expect(page.locator('.page-loading')).toBeHidden();const paper=await page.locator('.paper').boundingBox();if(!paper)throw new Error('No PDF page');await page.mouse.move(paper.x+35,paper.y+350);await page.mouse.down();await page.mouse.move(paper.x+450,paper.y+475);await page.mouse.up();await page.getByRole('button',{name:'Apply to working copy'}).click();await expect(page.locator('.textLayer')).toContainText('Second option');
+  await page.getByLabel('Tool',{exact:true}).selectOption('fill_forms');const first=page.getByLabel('On-page Preference: First option',{exact:true});const second=page.getByLabel('On-page Preference: Second option',{exact:true});await second.check();await expect(first).not.toBeChecked();await page.getByRole('button',{name:'Apply to working copy'}).click();await expect(second).toBeChecked();
+  await first.check();await page.getByRole('button',{name:'Apply to working copy'}).click();await expect(first).toBeChecked();await expect(second).not.toBeChecked();await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(second).toBeChecked();await expect(first).not.toBeChecked();
+  await expect(page.locator('.textLayer')).toContainText('Second option');await expect(page.locator('.page-loading')).toBeHidden();
+  await page.waitForFunction(()=>{const paper=document.querySelector('.paper');return paper?.getAttribute('data-rendered-revision')===paper?.getAttribute('data-revision');});
+  const painted=await page.locator('.paper canvas').evaluate(canvas=>{const c=canvas as HTMLCanvasElement;const data=c.getContext('2d')!.getImageData(0,0,c.width,c.height).data;let count=0;for(let index=0;index<data.length;index+=4)if(data[index+3]>128&&data[index]<220)count++;return {count,width:c.width,height:c.height};});
+  expect(painted.count).toBeGreaterThan(1000);
+  await page.screenshot({path:'artifacts/ui/radio-group.png',fullPage:true});const output=path.join(root,'artifacts','fixtures','ui-radio.pdf');await page.getByRole('button',{name:'Save a copy',exact:true}).click();await page.getByLabel('Absolute output path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('.status-bar')).toContainText(output);
+  await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Forms',exact:true}).click();await expect(page.getByLabel('On-page Preference: Second option',{exact:true})).toBeChecked();expect(fs.readFileSync(fixture).equals(original)).toBeTruthy();
 });

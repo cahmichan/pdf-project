@@ -51,6 +51,28 @@ try {
   await page.screenshot({path:path.join(receiptPath,'on-page-form.png')});
   await page.getByRole('button',{name:'Undo',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('input[aria-label="On-page Full name"]')?.value==='Example Person');
+  await page.getByLabel('Tool',{exact:true}).selectOption('add_form');
+  await page.getByLabel('Field type',{exact:true}).selectOption('radio');
+  await page.getByLabel('Unique field name').fill('Native preference');
+  await page.getByLabel('Choices, one per line').fill('First choice\nSecond choice');
+  await page.locator('.page-loading').waitFor({state:'hidden'});
+  const radioPaper=await page.locator('.paper').boundingBox();
+  await page.mouse.move(radioPaper.x+35,radioPaper.y+350);await page.mouse.down();await page.mouse.move(radioPaper.x+450,radioPaper.y+475);await page.mouse.up();
+  await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await page.locator('.textLayer').filter({hasText:'Second choice'}).waitFor();
+  await page.getByLabel('Tool',{exact:true}).selectOption('fill_forms');
+  await page.getByLabel('On-page Native preference: Second choice',{exact:true}).check();
+  const beforeRadio=Number(await page.locator('.paper').getAttribute('data-revision'));
+  await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await page.waitForFunction(before=>Number(document.querySelector('.paper')?.dataset.revision)>before,beforeRadio);
+  const radioState=await page.evaluate(()=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request:{command:'inspect_page',session:document.querySelector('.paper').dataset.session,args:{page:1}}}));
+  if(radioState.forms.filter(field=>field.type==='RadioButton').map(field=>field.value).join(',')!=='Off,O2')throw new Error('Native radio values are inconsistent.');
+  await page.locator('.page-loading').waitFor({state:'hidden'});
+  await page.screenshot({path:path.join(receiptPath,'radio-group.png')});
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await page.waitForFunction(()=>Number(document.querySelector('.paper')?.dataset.revision)>0&&!document.querySelector('input[aria-label="On-page Native preference: Second choice"]')?.checked);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await page.waitForFunction(()=>!document.querySelector('input[aria-label="On-page Native preference: Second choice"]'));
   await page.locator('.mode-bar').getByRole('button',{name:'Pages',exact:true}).click();
   await page.getByLabel('Tool',{exact:true}).selectOption('crop');
   await page.getByLabel('Crop left',{exact:true}).fill('12');
@@ -73,6 +95,7 @@ try {
   await page.locator('.page-loading').waitFor({state:'hidden'});
   await page.getByRole('button',{name:'Edit',exact:true}).click();
   await page.getByLabel('Text',{exact:true}).fill('Native WebView2 verified');
+  await page.locator('.page-loading').waitFor({state:'hidden'});
   const paper=await page.locator('.paper').boundingBox();
   await page.mouse.move(paper.x+45,paper.y+320);await page.mouse.down();await page.mouse.move(paper.x+350,paper.y+365);await page.mouse.up();
   await page.getByRole('button',{name:'Apply to working copy'}).click();
@@ -80,6 +103,7 @@ try {
   await page.screenshot({path:path.join(receiptPath,'editor.png')});
   await page.getByRole('button',{name:'Annotate',exact:true}).click();
   await page.getByLabel('Tool',{exact:true}).selectOption('ink');
+  await page.locator('.page-loading').waitFor({state:'hidden'});
   const inkPaper=await page.locator('.paper').boundingBox();
   await page.mouse.move(inkPaper.x+60,inkPaper.y+390);await page.mouse.down();
   await page.mouse.move(inkPaper.x+120,inkPaper.y+420,{steps:8});await page.mouse.move(inkPaper.x+200,inkPaper.y+390,{steps:8});await page.mouse.up();
@@ -131,7 +155,7 @@ try {
   },{fixture,folder:path.join(receiptPath,'split')});
   if(split.items.length!==2)throw new Error('Native split failed.');
   const digest=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,configured_free_archival_conversion:true,visual_page_organizer:true,split_pdf_reopen:true,precise_crop_and_custom_numbering:true,on_page_form_fill_and_undo:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
+  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,configured_free_archival_conversion:true,visual_page_organizer:true,split_pdf_reopen:true,precise_crop_and_custom_numbering:true,on_page_form_fill_and_undo:true,radio_create_fill_and_undo:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
   if(errors.length)throw new Error(JSON.stringify(errors));
   fs.writeFileSync(path.join(receiptPath,'receipt.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 } finally {

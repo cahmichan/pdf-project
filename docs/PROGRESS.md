@@ -200,3 +200,33 @@ Next: exercise unusual field-name keys and ensure split/image/comparison exports
 - Resolves the 0.10.0 staged-value gaps for split/image/comparison and unusual name keys. Drafts are still memory-only until applied or saved. Advanced form compatibility and all original roadmap items remain separate work.
 
 Next: radio groups and field detection, followed by remaining font/text/OCR/conversion/scanner/local-model work. Native installed UI/dialogs, physical printing/scanning, high-DPI and unusual personal documents remain manual acceptance gates. Full goal remains active.
+
+## 0.11.0 radio-group candidate (12 October 2026)
+
+- Added real AcroForm radio group creation with one parent field, distinct O1/O2/... appearance states, option labels and exclusive selection. Existing normal fields remain in the AcroForm catalog. Added radio choices to Create form field and direct on-page radio controls.
+- Fill updates parent values and widget appearances together, validates option states/conflicts, honors read-only/no-toggle-to-off flags, and rejects unsupported mixed-name hierarchies. Radio widgets use their dedicated path rather than the ordinary widget updater.
+- Duplicate-page tests exposed copied children being renamed independently. Copied radio parents now receive one unique group name without regenerating their appearance streams; copied selections stay independent of the original.
+- All 113 core tests passed. Seven radio cases cover all rotations, independent PDFium checked-button rendering, source/form preservation, save/reopen/undo, invalid values/creation, restriction flags and independent copies. Browser create/select/undo/save/reopen passed (8.6s on the final stable run); frontend build passed before the final field-type accessibility label. Full package/native gates pending. Latest verified installer remains 0.10.1.
+
+### Radio candidate render refinement
+
+- The first candidate package passed 127 Python cases and frozen radio creation/fill/reopen, but is not the final verified release. Printed-output review centered option captions beside their buttons and made field creation honor the color control; radio creation no longer shows an unused default-text field. Caption bounds pass at all rotations.
+- A screenshot caught a transient canvas between revisions. The viewer now owns loaded PDFs by path/revision, records completed rendering, and enables page editing controls only for the current completed render. The initial regression run passed 14 workflows but the stamp harness drew before the newly enforced render readiness and timed out with Apply disabled. Drawing harnesses now wait for page loading to finish; all gates will be refreshed before release.
+
+### Radio PDF.js compatibility fix
+
+- A canvas pixel assertion proved that the generated radio PDF could render blank in PDF.js while PDFium showed its content. Diagnostic annotation parsing traced this to explicit null child field entries (especially /T null), which PDF.js tried to decode as field-name strings.
+- New radio widgets now omit inherited field entries entirely instead of storing nulls. Parent field/value inheritance and appearances remain intact. The seven radio backend cases and browser create/select/undo/save/reopen now pass, including a non-white canvas assertion after undo. Annotation rendering was restored after an isolation probe; it is not disabled in the product.
+- Refreshing final full/browser/package/native gates is still required. Earlier 0.11 candidate installers are not the verified baseline; latest verified remains 0.10.1.
+
+## Photo scanning request (12 October 2026)
+
+User requested a CamScanner-style scan image function. Add a local photo-to-document workflow with image import, automatic corner proposal plus editable four-corner crop, perspective correction, color/grayscale/document enhancement, preview, page ordering and multi-page PDF output. Preserve source images and review output before saving. Offline OCR integrates with the existing PDF pipeline. Camera capture and physical scanner acceptance remain separate from photo import; do not substitute plain image-to-PDF for document scanning. Prioritize this after the in-flight 0.11 verification.
+
+## 0.11.0 verified milestone (12 October 2026)
+
+- All 127 Python tests passed (76.99s), all 15 browser workflows passed (80.49s), frozen-worker radio/create/fill/export/reopen and frontend/Rust/NSIS packaging passed. Browser pixel checks verify painted PDF content, beyond HTML form overlays.
+- Native bundled WebView2 passed radio creation/exclusive fill/undo and prior workflows, plus unusual-name draft/print-preparation/undo verification. Both receipts match current application/worker hashes and captured no page errors. Browser/native form screenshots reviewed.
+- Installer: artifacts/releases/0.11.0/Folio_0.11.0_x64-setup.exe, 57,336,897 bytes, SHA256 9f0b3c4138be0d871880dd7b3de936b56530f7a5688ea04c043a53e2bde13780.
+- Standard radio groups are supported; advanced hierarchical/multi-select/export-label compatibility, persistent unapplied drafts, physical printer/scanner and installed/high-DPI acceptance remain separate work. Full goal remains active.
+- Next priority: requested photo document scanning with perspective crop and enhancement, followed by remaining roadmap.

@@ -92,6 +92,76 @@ def test_shared_form_widgets_update_appearances_on_every_page(tmp_path):
 
 
 @pytest.mark.parametrize('rotation',[0,90,180,270])
+def test_radio_group_states_render_save_reopen_undo_and_other_forms(fixture,rotation,tmp_path):
+    engine,session,source=fixture;original=fingerprint(source)
+    session=apply(engine,session,'rotate',pages='1',degrees=rotation)
+    session=apply(engine,session,'add_radio',page=1,rect=[35,240,350,350],name='Preference',choices='First option\nSecond option',size=12)
+    inspected=engine.inspect_page(engine.session(session['id']),{'page':1})['forms']
+    buttons=[field for field in inspected if field['type']=='RadioButton']
+    assert len(buttons)==2 and {field['name'] for field in buttons}=={'Preference'}
+    assert [field['label'] for field in buttons]==['First option','Second option']
+    assert [field['on_state'] for field in buttons]==['O1','O2']
+    session=apply(engine,session,'fill_forms',values={buttons[1]['id']:'O2'})
+    with pdf.open(session['path']) as doc:
+        page=doc[0];fields=list(page.widgets());assert fields[0].field_name=='FullName'
+        radios=[field for field in fields if field.field_type==pdf.PDF_WIDGET_TYPE_RADIOBUTTON]
+        assert [field.field_value for field in radios]==['Off','O2']
+        for field,label in zip(radios,('First option','Second option')):
+            button=field.rect*page.rotation_matrix;caption=page.search_for(label)[0]*page.rotation_matrix
+            assert abs((button.y0+button.y1-caption.y0-caption.y1)/2)<3
+        assert {doc.xref_get_key(field.xref,'Parent')[1] for field in radios}=={doc.xref_get_key(radios[0].xref,'Parent')[1]}
+        center=(radios[1].rect*page.rotation_matrix).tl+pdf.Point(9,9)
+    output=tmp_path/'radio-filled.pdf';engine.export(engine.session(session['id']),{'path':str(output)})
+    with pdfium.PdfDocument(str(output)) as independent:
+        independent.init_forms();image=independent[0].render(scale=1,draw_annots=True).to_pil().convert('RGB')
+        assert sum(sum(image.getpixel((int(center.x)+x,int(center.y)+y)))<300 for x in range(-3,4) for y in range(-3,4))>5
+    reopened=engine.open_file({'path':str(output)})
+    radios=[field for field in engine.inspect_page(engine.session(reopened['id']),{'page':1})['forms'] if field['type']=='RadioButton']
+    reopened=apply(engine,reopened,'fill_forms',values={radios[0]['id']:'O1',radios[1]['id']:'O1'})
+    with pdf.open(reopened['path']) as doc:assert [field.field_value for field in doc[0].widgets() if field.field_type==5]==['O1','Off']
+    undone=engine.dispatch({'command':'undo','session':reopened['id'],'revision':reopened['revision']})
+    with pdf.open(undone['path']) as doc:assert [field.field_value for field in doc[0].widgets() if field.field_type==5]==['Off','O2']
+    for values in ({radios[0]['id']:'invalid'},{radios[0]['id']:'O1',radios[1]['id']:'O2'}):
+        with pytest.raises(PDFError):apply(engine,undone,'fill_forms',values=values)
+    assert fingerprint(source)==original
+
+
+def test_radio_duplicate_keeps_group_independent_and_valid(fixture):
+    engine,session,source=fixture
+    session=apply(engine,session,'add_form',page=1,rect=[35,240,350,350],name='Preference',field_type='radio',choices='First\nSecond')
+    session=apply(engine,session,'reorder',pages='1,1,2')
+    fields=engine.inspect_page(engine.session(session['id']),{'page':2})['forms']
+    buttons=[field for field in fields if field['type']=='RadioButton']
+    assert len({field['name'] for field in buttons})==1
+    assert buttons[0]['name']!='Preference'
+    session=apply(engine,session,'fill_forms',values={buttons[1]['id']:'O2'})
+    with pdf.open(session['path']) as doc:
+        assert [field.field_value for field in doc[0].widgets() if field.field_type==5]==['Off','Off']
+        assert [field.field_value for field in doc[1].widgets() if field.field_type==5]==['Off','O2']
+
+
+@pytest.mark.parametrize('restriction',[pdf.PDF_FIELD_IS_READ_ONLY,pdf.PDF_BTN_FIELD_IS_NO_TOGGLE_TO_OFF])
+def test_radio_flags_and_invalid_creation_preserve_documents(fixture,tmp_path,restriction):
+    engine,session,source=fixture;baseline=fingerprint(source)
+    for options in ('Only one','Same\nSame'):
+        with pytest.raises(PDFError):apply(engine,session,'add_radio',page=1,rect=[35,240,350,350],name='Preference',choices=options)
+        assert engine.info(engine.session(session['id']))['revision']==session['revision']
+    session=apply(engine,session,'add_radio',page=1,rect=[35,240,350,350],name='Preference',choices='First\nSecond')
+    buttons=[item for item in engine.inspect_page(engine.session(session['id']),{'page':1})['forms'] if item['type']=='RadioButton']
+    session=apply(engine,session,'fill_forms',values={buttons[0]['id']:'O1'})
+    restricted=tmp_path/'restricted-radio.pdf'
+    with pdf.open(session['path']) as doc:
+        page=doc[0];button=next(field for field in page.widgets() if field.field_type==5)
+        parent=int(doc.xref_get_key(button.xref,'Parent')[1].split()[0]);doc.xref_set_key(parent,'Ff',str(32768|restriction));doc.save(restricted)
+    session=engine.open_file({'path':str(restricted)});restricted_hash=fingerprint(restricted)
+    buttons=[item for item in engine.inspect_page(engine.session(session['id']),{'page':1})['forms'] if item['type']=='RadioButton']
+    values={buttons[1]['id']:'O2'} if restriction==pdf.PDF_FIELD_IS_READ_ONLY else {button['id']:'Off' for button in buttons}
+    with pytest.raises(PDFError):apply(engine,session,'fill_forms',values=values)
+    assert engine.info(engine.session(session['id']))['revision']==session['revision']
+    assert fingerprint(restricted)==restricted_hash and fingerprint(source)==baseline
+
+
+@pytest.mark.parametrize('rotation',[0,90,180,270])
 @pytest.mark.parametrize('origin',[(0,0),(-30,-60),(20,30)])
 @pytest.mark.parametrize('mode',['margins','selection'])
 def test_precise_crop_visual_pixels_offset_media_reset_and_save(tmp_path,rotation,origin,mode):

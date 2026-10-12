@@ -78,6 +78,13 @@ try:
     reopened=command({'command':'open','args':{'path':filled['path']}})
     assert command({'command':'inspect_page','session':reopened['id'],'args':{'page':1}})['forms'][0]['value']=='Packaged form filled'
     receipt['form_fill_reopen']=True
+    info=command({'command':'apply','session':info['id'],'revision':info['revision'],'args':{'operation':'add_form','field_type':'radio','page':1,'rect':[35,400,450,475],'name':'Packaged preference','choices':'First\nSecond'}})
+    buttons=[field for field in command({'command':'inspect_page','session':info['id'],'args':{'page':1}})['forms'] if field['type']=='RadioButton']
+    info=command({'command':'apply','session':info['id'],'revision':info['revision'],'args':{'operation':'fill_forms','values':{buttons[1]['id']:'O2'}}})
+    radios=command({'command':'export','session':info['id'],'args':{'path':str(output/'radio.pdf'),'overwrite':True}})
+    radio_opened=command({'command':'open','args':{'path':radios['path']}})
+    assert [field['value'] for field in command({'command':'inspect_page','session':radio_opened['id'],'args':{'page':1}})['forms'] if field['type']=='RadioButton']==['Off','O2']
+    receipt['radio_group_create_fill_reopen']=True
     import uuid
     identity=output/f'synthetic-{uuid.uuid4().hex}.pfx'
     command({'command':'create_identity','args':{'path':str(identity),'name':'Packaged synthetic identity','password':'Synthetic-smoke-only-123'}})

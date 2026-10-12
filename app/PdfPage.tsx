@@ -22,12 +22,13 @@ export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink
   const [drag,setDrag] = useState<number[]|null>(null);
   const [error,setError] = useState('');
   const [loading,setLoading] = useState(true);
-  const [loaded,setLoaded] = useState<PDFDocumentProxy|null>(null);
+  const [loaded,setLoaded] = useState<{pdf:PDFDocumentProxy;path:string;revision:number}|null>(null);
+  const [rendered,setRendered]=useState<{path:string;revision:number;page:number;zoom:number}|null>(null);
   useEffect(()=>{
     setLoaded(null);
     const task = getDocument({url:documentUrl(document.path,document.revision),enableXfa:false,cMapUrl:'/pdfjs/cmaps/',cMapPacked:true,standardFontDataUrl:'/pdfjs/standard_fonts/',wasmUrl:'/pdfjs/wasm/'});
     let disposed = false;
-    task.promise.then(pdf=>{ if (!disposed) {setLoaded(pdf); setLoading(true);} }).catch(e=>{if(!disposed){setError(String(e));setLoading(false);}});
+    task.promise.then(pdf=>{ if (!disposed) {setLoaded({pdf,path:document.path,revision:document.revision}); setLoading(true);} }).catch(e=>{if(!disposed){setError(String(e));setLoading(false);}});
     return ()=>{disposed=true;void task.destroy();};
   },[document.path,document.revision]);
   useEffect(()=>{
@@ -36,8 +37,8 @@ export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink
     async function paint() {
       // Load per revision/page so rendering cannot use a stale document reference.
       try {
-        if (!loaded)return;
-        const pdfPage = await loaded.getPage(page);
+        if (!loaded||loaded.path!==document.path||loaded.revision!==document.revision)return;
+        const pdfPage = await loaded.pdf.getPage(page);
         if (cancelled || !canvas.current || !textLayer.current) return;
         const viewport = pdfPage.getViewport({scale:zoom});
         const ratio = window.devicePixelRatio || 1;
@@ -51,12 +52,12 @@ export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink
         textLayer.current.style.setProperty('--scale-factor',String(zoom));
         layer=new TextLayer({textContentSource:await pdfPage.getTextContent(),container:textLayer.current,viewport});
         await layer.render();
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {setRendered({path:document.path,revision:document.revision,page,zoom});setLoading(false);}
       } catch(e) {if (!cancelled) {setError(String(e));setLoading(false);}}
     }
     void paint();
     return ()=>{cancelled=true;render?.cancel();layer?.cancel();};
-  },[loaded,page,zoom]);
+  },[loaded,page,zoom,document.path,document.revision]);
   const choose = ['crop','add_text','replace_text','add_image','highlight','underline','strikeout','rectangle','stamp','ink','comment','redact','add_form'].includes(tool);
   function point(event:React.PointerEvent):[number,number] {
     const bounds=wrapper.current!.getBoundingClientRect();
@@ -72,16 +73,17 @@ export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink
     if(tool==='ink'){const points=[...ink.current,end];ink.current=[];setActiveInk([]);onStroke(points.map(p=>[p[0]*model.width/dimensions.width,p[1]*model.height/dimensions.height]));return;}
     onSelect([Math.min(origin[0],end[0])*model.width/dimensions.width,Math.min(origin[1],end[1])*model.height/dimensions.height,Math.max(origin[0],end[0])*model.width/dimensions.width,Math.max(origin[1],end[1])*model.height/dimensions.height]);
   }
+  const ready=rendered?.path===document.path&&rendered.revision===document.revision&&rendered.page===page&&rendered.zoom===zoom;
   const model=document.pages[page-1];
   const shown=drag || (selection && [selection[0]*dimensions.width/model.width,selection[1]*dimensions.height/model.height,selection[2]*dimensions.width/model.width,selection[3]*dimensions.height/model.height]);
-  return <div className="paper" ref={wrapper} style={{width:dimensions.width,height:dimensions.height}}>
+  return <div className="paper" data-session={document.id} data-revision={document.revision} data-rendered-revision={ready?document.revision:-1} ref={wrapper} style={{width:dimensions.width,height:dimensions.height}}>
     <canvas ref={canvas}/><div ref={textLayer} className="textLayer" style={{pointerEvents:choose?'none':'auto'}}/>
     {!choose&&links.map((link,index)=><button key={index} className="pdf-link" aria-label={link.uri?`Open link ${link.uri}`:`Go to page ${link.page}`} title={link.uri||`Page ${link.page}`} onClick={()=>onLink(link)} style={{left:link.rect[0]*dimensions.width/model.width,top:link.rect[1]*dimensions.height/model.height,width:(link.rect[2]-link.rect[0])*dimensions.width/model.width,height:(link.rect[3]-link.rect[1])*dimensions.height/model.height}}/>)}
-    {choose && <div className="selection-surface" onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={()=>{start.current=null;setDrag(null);ink.current=[];setActiveInk([]);}}/>}
+    {choose && ready && <div className="selection-surface" onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={()=>{start.current=null;setDrag(null);ink.current=[];setActiveInk([]);}}/>}
     {tool==='ink'&&<svg className="ink-preview" width={dimensions.width} height={dimensions.height} aria-label="Ink preview"><g fill="none" stroke={inkColor} strokeWidth={inkWidth*zoom} strokeLinecap="round" strokeLinejoin="round">{strokes.map((stroke,index)=><polyline key={index} points={stroke.map(p=>`${p[0]*dimensions.width/model.width},${p[1]*dimensions.height/model.height}`).join(' ')}/>)}<polyline points={activeInk.map(p=>p.join(',')).join(' ')}/></g></svg>}
     {shown && <div className={`selection-box ${tool==='redact'?'redaction':''}`} style={{left:shown[0],top:shown[1],width:shown[2]-shown[0],height:shown[3]-shown[1]}}/>}
-    {tool==='fill_forms'&&!loading&&<FormOverlay fields={fields} values={fieldValues} onChange={onFieldChange} width={dimensions.width} height={dimensions.height} pageWidth={model.width} pageHeight={model.height} disabled={busy}/>}
-    {loading && <div className="page-loading">Rendering page…</div>}
+    {tool==='fill_forms'&&ready&&!loading&&<FormOverlay fields={fields} values={fieldValues} onChange={onFieldChange} width={dimensions.width} height={dimensions.height} pageWidth={model.width} pageHeight={model.height} disabled={busy}/>}
+    {!error&&(loading||!ready) && <div className="page-loading">Rendering page…</div>}
     {error && <div className="page-error">Unable to render this page: {error}</div>}
   </div>;
 }

@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English OCR model. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.10.1/Folio_0.10.1_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
+Latest verified installer milestone: `artifacts/releases/0.11.0/Folio_0.11.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
 
 ## Free Office runtime
 
@@ -57,3 +57,5 @@ Choose Forms, then Fill existing fields. Supported text, multiline, checkbox, dr
 Unapplied drafts are held in memory, so apply/save before exiting. Closing a tab or undoing with pending values shows a warning. Signature fields use certificate signing; complex radio/multi-select fields and scripted calculations require further compatibility work. Review output in another viewer before using a completed form.
 
 Version 0.10.1 also applies staged form values before splitting, exporting page images or comparing the current PDF. Unusual field names such as `__proto__`, `constructor` and `toString` are supported. Native smoke runs an additional draft/print-preview/undo fixture; it does not open the physical print dialog or submit a print job.
+
+Version 0.11 adds standard radio groups under Create form field: choose Radio group, enter distinct option labels on separate lines, and draw a rectangle. Fill existing fields selects one option per group. Review advanced hierarchical forms separately; these need further compatibility work.
