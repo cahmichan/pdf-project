@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { TextRun } from './api';
 import { browserStyle, liveRuns } from './text-styles';
-export type TextDraft={documentId:string;page:number;kind:'edit'|'add';expected:string;sourceRect:number[];rect:number[];point:number[];text:string;size:number;color:string;font:string;sourceFont:string;mixedStyles?:boolean;sourceRuns?:TextRun[];sourceSize:number;sourceColor:string;flags:number;rotation:number;caret?:number;selectedText?:string};
+export type TextDraft={documentId:string;page:number;kind:'edit'|'add';expected:string;sourceRect:number[];rect:number[];point:number[];text:string;size:number;color:string;font:string;sourceFont:string;mixedStyles?:boolean;colorMode?:'original'|'uniform';sourceRuns?:TextRun[];sourceSize:number;sourceColor:string;flags:number;rotation:number;caret?:number;selectedText?:string};
 const fonts=[['original','Original font'],['helv','Helvetica'],['hebo','Helvetica bold'],['heit','Helvetica italic'],['tiro','Times'],['tibo','Times bold'],['tiit','Times italic'],['cour','Courier']];
 type Selection={start:number;end:number};
 function selectionIn(element:HTMLElement):Selection|null{
@@ -19,13 +19,15 @@ function restoreSelection(element:HTMLElement,value:Selection){
 export function InlineTextEditor({draft,zoom,pageWidth,pageHeight,busy,onChange,onApply,onCancel}:{draft:TextDraft;zoom:number;pageWidth:number;pageHeight:number;busy:boolean;onChange:(draft:TextDraft)=>void;onApply:()=>void;onCancel:()=>void}){
   const input=useRef<HTMLDivElement>(null),composition=useRef(false),savedSelection=useRef<Selection|null>(null),undo=useRef<TextDraft[]>([]),redo=useRef<TextDraft[]>([]);
   const [height,setHeight]=useState(28),[width,setWidth]=useState(100*zoom);
+  const toolbar=useRef<HTMLDivElement>(null),[toolbarPosition,setToolbarPosition]=useState({left:0,top:0});
+  const toolbarWidth=Math.min(500,Math.max(160,pageWidth*zoom-8));
   const rawWidth=draft.kind==='edit'?draft.sourceRect[2]-draft.sourceRect[0]:180;
   const centerX=(draft.rect[0]+draft.rect[2])/2*zoom,centerY=(draft.rect[1]+draft.rect[3])/2*zoom,rotation=draft.kind==='edit'?draft.rotation:0;
   const x=draft.kind==='edit'&&rotation?centerX-rawWidth*zoom/2:draft.rect[0]*zoom,y=draft.kind==='edit'&&rotation?centerY-(draft.sourceRect[3]-draft.sourceRect[1])*zoom/2:draft.rect[1]*zoom;
   const runs=useMemo(()=>{
-    if(draft.font==='original'&&draft.mixedStyles&&draft.sourceRuns&&Array.from(draft.expected).length<=5000&&Array.from(draft.text).length<=5000){const mapped=liveRuns(draft.expected,draft.sourceRuns,draft.text,draft.size,draft.sourceSize,draft.color,draft.sourceColor);if(mapped.length)return mapped;}
+    if(draft.font==='original'&&draft.mixedStyles&&draft.sourceRuns&&Array.from(draft.expected).length<=5000&&Array.from(draft.text).length<=5000){const mapped=liveRuns(draft.expected,draft.sourceRuns,draft.text,draft.size,draft.sourceSize,draft.color,draft.sourceColor,draft.colorMode);if(mapped.length)return mapped;}
     return [{text:draft.text,font:draft.font==='original'?draft.sourceFont:draft.font,size:draft.size,color:draft.color,flags:draft.font==='original'?draft.flags:0,offset:0}];
-  },[draft.text,draft.font,draft.size,draft.color,draft.expected,draft.sourceRuns]);
+  },[draft.text,draft.font,draft.size,draft.color,draft.colorMode,draft.expected,draft.sourceRuns]);
   function change(next:TextDraft){undo.current.push(draft);if(undo.current.length>100)undo.current.shift();redo.current=[];onChange(next);}
   function read(){const element=input.current;if(!element||busy)return;savedSelection.current=selectionIn(element);const text=element.textContent||'';if(text!==draft.text)change({...draft,text});}
   function insert(text:string){const element=input.current;if(!element||busy)return;element.focus();if(savedSelection.current)restoreSelection(element,savedSelection.current);const selection=window.getSelection();if(!selection?.rangeCount)return;const range=selection.getRangeAt(0);if(!element.contains(range.commonAncestorContainer))return;range.deleteContents();const node=document.createTextNode(text.replace(/\r\n?/g,'\n').replace(/\t/g,'    '));range.insertNode(node);range.setStartAfter(node);range.collapse(true);selection.removeAllRanges();selection.addRange(range);read();}
@@ -40,6 +42,7 @@ export function InlineTextEditor({draft,zoom,pageWidth,pageHeight,busy,onChange,
     setWidth(Math.max(40,Math.min((rotation?Math.max(pageWidth,pageHeight):pageWidth-draft.rect[0])*zoom-4,Math.max(rawWidth*zoom,longest+8))));
     element.style.height='auto';setHeight(Math.max(draft.size*zoom*1.35,element.scrollHeight));
   },[runs,width,zoom,pageWidth,pageHeight]);
+  useLayoutEffect(()=>{const element=input.current,parent=element?.closest('.paper');if(!element||!parent||!toolbar.current)return;const area=element.getBoundingClientRect(),paper=parent.getBoundingClientRect(),barHeight=toolbar.current.offsetHeight;const top=area.top-paper.top;setToolbarPosition({left:Math.max(0,Math.min(area.left-paper.left,paper.width-toolbarWidth-4)),top:top>=barHeight+6?top-barHeight-6:area.bottom-paper.top+8});},[runs,height,width,zoom,toolbarWidth]);
   useEffect(()=>{const element=input.current;if(!element)return;undo.current=[];redo.current=[];element.focus();const selected=draft.selectedText?draft.text.indexOf(draft.selectedText):-1,caret=draft.caret??draft.text.length;savedSelection.current={start:selected>=0?selected:caret,end:selected>=0?selected+draft.selectedText!.length:caret};restoreSelection(element,savedSelection.current);},[draft.expected,draft.kind,draft.sourceRect.join(','),draft.point.join(',')]);
   return <>
     {draft.kind==='edit'&&<div className="inline-text-mask" style={{left:draft.rect[0]*zoom,top:draft.rect[1]*zoom,width:(draft.rect[2]-draft.rect[0])*zoom,height:(draft.rect[3]-draft.rect[1])*zoom}}/>}
@@ -49,9 +52,9 @@ export function InlineTextEditor({draft,zoom,pageWidth,pageHeight,busy,onChange,
       if(event.key==='Enter'){event.preventDefault();if(event.ctrlKey||event.metaKey)onApply();else insert('\n');return;}
       if((event.ctrlKey||event.metaKey)&&['z','y'].includes(event.key.toLowerCase())){event.preventDefault();const reverse=event.key.toLowerCase()==='y'||event.shiftKey,source=reverse?redo:undo,target=reverse?undo:redo,next=source.current.pop();if(next){target.current.push(draft);onChange(next);}}
     }}/>
-    <div className="inline-text-toolbar" style={{left:Math.min(draft.rect[0]*zoom,Math.max(0,pageWidth*zoom-420)),top:Math.max(0,draft.rect[1]*zoom-52)}}>
+    <div ref={toolbar} className="inline-text-toolbar" style={{...toolbarPosition,width:toolbarWidth}}>
       <label>Font<select aria-label="Text font" disabled={busy} value={draft.font} onChange={event=>change({...draft,font:event.target.value})}>{fonts.filter(([value])=>value!=='original'||draft.kind==='edit').map(([value,label])=><option key={value} value={value}>{value==='original'?(draft.mixedStyles?'Original paragraph styles':`${label} (${draft.sourceFont})`):label}</option>)}</select></label>
-      <label>Size<input aria-label="Text size" type="number" min="1" max="300" disabled={busy} value={draft.size} onChange={event=>change({...draft,size:Number(event.target.value)})}/></label><input aria-label="Text color" type="color" disabled={busy} value={draft.color} onChange={event=>change({...draft,color:event.target.value})}/><button disabled={busy||(draft.kind==='add'&&!draft.text.trim())} onClick={onApply}>Apply text</button><button disabled={busy} onClick={onCancel}>Cancel text</button>
+      <label>Size<input aria-label="Text size" type="number" min="1" max="300" disabled={busy} value={draft.size} onChange={event=>change({...draft,size:Number(event.target.value)})}/></label>{draft.mixedStyles&&draft.font==='original'&&<label>Colors<select aria-label="Paragraph color mode" disabled={busy} value={draft.colorMode||'original'} onChange={event=>change({...draft,colorMode:event.target.value as 'original'|'uniform',color:event.target.value==='original'?draft.sourceColor:draft.color})}><option value="original">Original colors</option><option value="uniform">One color</option></select></label>}<input aria-label="Text color" type="color" disabled={busy} value={draft.color} onChange={event=>change({...draft,color:event.target.value,colorMode:'uniform'})}/><button disabled={busy||(draft.kind==='add'&&!draft.text.trim())} onClick={onApply}>Apply text</button><button disabled={busy} onClick={onCancel}>Cancel text</button>
     </div>
   </>;
 }

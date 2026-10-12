@@ -41,7 +41,8 @@ class StyledText:
         ratio=float(args.get('size',original['size']))/original['size']
         self.default_size=original['size']*ratio
         color=args.get('color',original['color'])
-        override=color.lower()!=original['color'].lower() if isinstance(color,str) else True
+        mode=args.get('color_mode','auto')
+        override=mode=='uniform' or (mode=='auto' and (color.lower()!=original['color'].lower() if isinstance(color,str) else True))
         keys=[(item['font'],item['size'],item['color'],item['flags'],item['offset']) for item in mapped]
         for key in dict.fromkeys(keys):
             name,size,tint,flags,offset=key

@@ -56,6 +56,13 @@ try:
     with pdf.open(styled['path']) as checked:
         spans=[span for item in checked[0].get_text('dict')['blocks'] if item['type']==0 for line in item['lines'] for span in line['spans']]
         amount=next(span for span in spans if '$125' in span['text']);assert amount['font']=='Helvetica-Bold' and abs(amount['size']-18)<.1 and amount['color']&0xff0000
+    color_block=next(block for block in command({'command':'inspect_page','session':styled['id'],'args':{'page':1}})['text_blocks'] if '$125' in block['text'])
+    colored=command({'command':'apply','session':styled['id'],'revision':styled['revision'],'args':{'operation':'edit_text','expected':color_block['text'],'source_rect':color_block['raw_rect'],'text':color_block['text'],'font':'original','color':'#000000','color_mode':'uniform'}})
+    color_saved=command({'command':'export','session':colored['id'],'args':{'path':str(output/'one-color.pdf'),'overwrite':True}})
+    with pdf.open(color_saved['path']) as checked:
+        spans=[span for item in checked[0].get_text('dict')['blocks'] if item['type']==0 for line in item['lines'] for span in line['spans']]
+        assert all(span['color']==0 for span in spans)
+        assert next(span for span in spans if '$125' in span['text'])['font']=='Helvetica-Bold'
     mixed_scan=command({'command':'open','args':{'path':str(root/'artifacts'/'fixtures'/'mixed-ocr.pdf')}})
     mixed_scan=command({'command':'apply','session':mixed_scan['id'],'revision':mixed_scan['revision'],'args':{'operation':'ocr'}})
     assert mixed_scan['ocr_report']['words_added']>0
@@ -122,6 +129,7 @@ try:
     receipt['camera_frame_import']=True
     receipt['direct_text_edit_insert_reopen']=True
     receipt['original_mixed_styles_preserved']=True
+    receipt['same_source_color_uniform_override']=True
     receipt['mixed_page_ocr_no_duplicates']=True
     processed=command({'command':'scan_preview','args':{**photo,'filter':'black_white'}})
     assert processed['preview'].startswith('data:image/jpeg;base64,')

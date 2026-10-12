@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English, Malay and Simplified Chinese OCR models. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.18.0/Folio_0.18.0_x64-setup.exe`. This build includes multilingual offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
+Latest verified installer milestone: `artifacts/releases/0.19.0/Folio_0.19.0_x64-setup.exe`. This build includes multilingual offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
 
 ## Free Office runtime
 
@@ -104,4 +104,12 @@ The on-page editor now displays mixed font weight, italic style, size, color and
 
 The browser currently uses serif/sans/monospace font representations; saved PDFs still reuse supported original embedded fonts. Exact embedded-font live rendering, complex shaping/bidi, selected-run formatting and surrounding-layout movement remain further work. Styled paragraphs are limited to 5,000 characters. Draft undo history resets when the editor remounts; apply/save before closing. Synthetic composition tests cover event handling, while actual Windows IME typing still needs a manual check. Version 0.18 passed packaged/native acceptance; earlier releases remain preserved.
 
-Version 0.18.0 passed 189 Python tests, 25 browser workflows plus an enhanced formatting-undo check, frozen-worker checks and six native suites. Native checks verify live mixed styles and draft undo/redo before applying, then saved fonts/styles and document undo. Resetting the paragraph color to its first source color restores original run colors; a dedicated same-color uniform override remains work. Exact live embedded fonts/spacing and actual Windows IME require further work/manual review. Hardware and installed dialogs remain manual acceptance gates.
+Version 0.18.0 passed 189 Python tests, 25 browser workflows plus an enhanced formatting-undo check, frozen-worker checks and six native suites. Native checks verify live mixed styles and draft undo/redo before applying, then saved fonts/styles and document undo. From 0.19, choose Original colors to restore the source colors, or One color to override all runs, including with the first source color. Exact live embedded fonts/spacing and actual Windows IME require further work/manual review. Hardware and installed dialogs remain manual acceptance gates.
+
+## Explicit paragraph colors (0.19)
+
+For a mixed paragraph using Original paragraph styles, choose Original colors to retain its source colors, or One color to apply the color picker to the whole paragraph. Choosing a new picker color selects One color automatically. You can choose the first source color (for example black) as a uniform override; it no longer implicitly restores mixed colors. Fonts and relative sizes remain retained. Choosing a uniform color already present everywhere leaves an unchanged draft without an extra undo revision. The floating toolbar wraps and moves above/below edited text, including at lower zoom.
+
+Edit tools wait for matching text metadata. When opening another PDF, wait until its new page appears before editing. Version 0.19 passed packaged/native checks; earlier releases remain preserved. Exact live fonts, shaping, selected-run formatting and visible scan reconstruction remain work.
+
+Version 0.19.0 passed 194 Python tests, 26 browser workflows, frozen-worker checks and six native suites. Native checks cover first-source-color uniform override and no-op revision preservation. Browser toolbar layout was checked at 100 and 30 percent zoom. Exact font preview/shaping, actual Windows IME, hardware and installed dialogs remain further work/manual acceptance gates.

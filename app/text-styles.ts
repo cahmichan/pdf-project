@@ -19,7 +19,7 @@ function matches(before:string[],after:string[]):Match[]{
   for(const block of blocks){const last=merged.at(-1);if(last&&last[0]+last[2]===block[0]&&last[1]+last[2]===block[1])last[2]+=block[2];else merged.push([...block]);}
   merged.push([before.length,after.length,0]);return merged;
 }
-export function liveRuns(before:string,source:TextRun[],after:string,size:number,sourceSize:number,color:string,sourceColor:string):TextRun[]{
+export function liveRuns(before:string,source:TextRun[],after:string,size:number,sourceSize:number,color:string,sourceColor:string,colorMode:'auto'|'original'|'uniform'='auto'):TextRun[]{
   const old=Array.from(before),next=Array.from(after),styles=source.flatMap(run=>Array.from(run.text,()=>run));
   if(!styles.length||styles.length!==old.length)return [];
   const mapped:TextRun[]=before===after?[...styles]:[];let i=0,j=0;
@@ -27,7 +27,7 @@ export function liveRuns(before:string,source:TextRun[],after:string,size:number
     if(j<b){const inherited=a>i?styles[i]:styles[Math.max(0,i-1)];for(let k=j;k<b;k++)mapped.push(inherited);}
     mapped.push(...styles.slice(a,a+count));i=a+count;j=b+count;
   }
-  const runs:TextRun[]=[];const ratio=size/sourceSize,override=color.toLowerCase()!==sourceColor.toLowerCase();
+  const runs:TextRun[]=[];const ratio=size/sourceSize,override=colorMode==='uniform'||(colorMode==='auto'&&color.toLowerCase()!==sourceColor.toLowerCase());
   next.forEach((char,index)=>{const style=mapped[index],run={...style,text:char,size:style.size*ratio,offset:style.offset*ratio,color:override?color:style.color};const last=runs.at(-1);if(last&&last.font===run.font&&last.size===run.size&&last.color===run.color&&last.flags===run.flags&&last.offset===run.offset)last.text+=char;else runs.push(run);});
   return runs;
 }

@@ -52,6 +52,8 @@ def font_choice(doc,page,args,original,text):
 
 def edit(doc,page,args):
     from engine import PDFError,rgb
+    if args.get('color_mode','auto') not in ('auto','original','uniform'):
+        raise PDFError('Choose original run colors or one paragraph color.')
     items=paragraphs(page);adding=args.get('operation')=='insert_text'
     original=None
     if not adding:

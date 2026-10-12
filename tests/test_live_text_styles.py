@@ -17,14 +17,15 @@ def test_browser_style_mapping_matches_pdf_rules_for_unicode_ties_and_repeated_t
         after=before
         for _ in range(3):
             a=rng.randint(0,len(after));b=rng.randint(a,len(after));after=after[:a]+''.join(rng.choice('ab 🙂中\n') for _ in range(rng.randint(0,6)))+after[b:]
-        styles=[{'font':'Run'+str(i%3),'size':12+i%3,'color':'#000000','flags':i%3,'offset':i%2} for i in range(len(before))]
-        ratio=2 if index%2 else 1;color='#ff0000' if index%3 else '#000000'
-        cases.append({'before':before,'source':[{**style,'text':char} for char,style in zip(before,styles)],'after':after,'size':12*ratio,'sourceSize':12,'color':color,'sourceColor':'#000000'})
-        expected.append([{**style,'size':style['size']*ratio,'offset':style['offset']*ratio,'color':color if color!='#000000' else style['color'],'text':char} for char,style in zip(after,mapped_styles(before,styles,after))])
+        styles=[{'font':'Run'+str(i%3),'size':12+i%3,'color':('#000000','#cc0000','#004c00')[i%3],'flags':i%3,'offset':i%2} for i in range(len(before))]
+        ratio=2 if index%2 else 1;color='#ff0000' if index%4 else '#000000';mode=('auto','uniform','original')[index%3]
+        cases.append({'before':before,'source':[{**style,'text':char} for char,style in zip(before,styles)],'after':after,'size':12*ratio,'sourceSize':12,'color':color,'sourceColor':'#000000','colorMode':mode})
+        override=mode=='uniform' or (mode=='auto' and color!='#000000')
+        expected.append([{**style,'size':style['size']*ratio,'offset':style['offset']*ratio,'color':color if override else style['color'],'text':char} for char,style in zip(after,mapped_styles(before,styles,after))])
     code="""import fs from 'node:fs';import ts from 'typescript';
 const compiled=ts.transpile(fs.readFileSync('app/text-styles.ts','utf8'),{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022});
 const {liveRuns}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
-const cases=JSON.parse(fs.readFileSync(0,'utf8'));console.log(JSON.stringify(cases.map(c=>liveRuns(c.before,c.source,c.after,c.size,c.sourceSize,c.color,c.sourceColor).flatMap(r=>Array.from(r.text,char=>({...r,text:char}))))));"""
+const cases=JSON.parse(fs.readFileSync(0,'utf8'));console.log(JSON.stringify(cases.map(c=>liveRuns(c.before,c.source,c.after,c.size,c.sourceSize,c.color,c.sourceColor,c.colorMode).flatMap(r=>Array.from(r.text,char=>({...r,text:char}))))));"""
     run=subprocess.run([shutil.which('node'),'--input-type=module','-e',code],input=json.dumps(cases,ensure_ascii=False),encoding='utf-8',capture_output=True,cwd=Path(__file__).resolve().parents[1],check=True)
     assert json.loads(run.stdout)==expected
 
