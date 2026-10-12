@@ -160,3 +160,27 @@ Next: exact visual crop controls and page-number/watermark customization, then r
 - Installer UI/native dialogs, physical printing/scanning, high-DPI and unusual personal PDFs remain manual gates. No personal documents or hardware jobs were used.
 
 Next: on-page form interaction, radio groups/detection and remaining text/font/OCR/conversion/structural Markdown/scanner/local-model work from the original roadmap. The full goal remains active.
+
+## 0.10.0 on-page form candidate (12 October 2026)
+
+- Added direct on-page text, multiline, checkbox, dropdown and single-select list controls. Their bounds follow crop/rotation; the controls rotate with the field. Read-only fields are disabled and maximum lengths are reflected in the UI and enforced by the engine. Unsupported signature/radio/multi-select overlays remain explicit limitations.
+- Form drafts survive page/tab changes in memory, including logical shared-name synchronization. Apply includes edits from visited pages; Save applies pending values before exporting a separate copy. Print preparation, certificate signing and other working edits apply current staged values first. Closing/undo with pending values gives a specific warning. Ctrl+Z/Y inside inputs uses native input editing history.
+- Four new backend cases passed geometry/flags/fill/export/reopen/undo/source preservation at all rotations with independent PDFium rendering. The existing 101 core cases passed before those additions.
+- Three targeted browser tests passed: original sidebar form filling, direct controls at all rotations, and page/tab drafts plus Save without separate Apply. The old locator was scoped to the sidebar to distinguish the new on-page control, and the maxlength fixture expected values were corrected to fit 8 characters. Production frontend build passed before final lookup/checkbox refinements; full gates are next.
+- Latest fully verified installer remains 0.9.0. Radio group creation/detection, multi-select/export-label choices, richer field appearance and unusual real forms still need work. Full goal stays active.
+
+### Form candidate preservation refinement
+
+- Page/tab draft, auto-save and all rotated control browser cases passed. Screenshot review refined multiline sidebar controls and listbox presentation; three affected browser paths passed again.
+- A same-named widget fixture exposed independent values/appearances despite the shared logical name. Fill now gathers changed logical names, synchronizes supported widgets on all pages, rejects conflicting new values, and rejects unknown widget IDs. Read-only/length protections apply to every affected widget. Radio widgets remain outside this synchronization path.
+- All 106 current core tests passed, including shared-field appearance extraction on both pages after flattening with PDFium. Full package/native gates pending. Latest verified installer remains 0.9.0.
+
+## 0.10.0 verified milestone (12 October 2026)
+
+- All 120 Python tests passed (75.20s). All 13 browser workflows passed before the final multiline/list/shared-value refinements; the three affected form workflows passed again after those refinements (22.2s). Frontend/Rust/NSIS packaging passed.
+- Frozen worker passed form fill/export/reopen plus all prior smoke workflows without developer Python on PATH. Actual bundled WebView2 passed direct on-page text fill/apply/undo alongside all prior native checks, with no captured page errors.
+- Synthetic cropped/rotated form control screenshots visually inspected. Unknown/conflicting-value development probes reject requests without changing the source or revision; receipt is preserved with UI evidence. Shared field appearance is verified independently after flattening.
+- Installer: artifacts/releases/0.10.0/Folio_0.10.0_x64-setup.exe (57,326,840 bytes). SHA256: 3d7d0622480e5d8b489687094be6aafbf69f665a2f4992d9649d692d3958d264.
+- Drafts remain in memory until applied or saved; browser/app shutdown recovery of unapplied values is not implemented. Advanced radio/multi-select/export-label choices, scripted calculations, richer fonts and unusual forms remain compatibility work. Native dialogs, installed UI, physical printer/scanner and high-DPI acceptance remain manual gates.
+
+Next: exercise unusual field-name keys and ensure split/image/comparison exports include staged form values, then radio groups/detection and the remaining original text/OCR/conversion/scanner/local-model roadmap. Full goal remains active.

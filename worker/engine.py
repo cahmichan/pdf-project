@@ -293,12 +293,28 @@ class Engine:
                 for offset,n in enumerate(selected):decorate_page(doc[n],args,offset,len(selected),len(doc))
             elif operation == 'fill_forms':
                 values = args['values']
+                known=set();shared={}
+                synchronized=(pdf.PDF_WIDGET_TYPE_TEXT,pdf.PDF_WIDGET_TYPE_CHECKBOX,pdf.PDF_WIDGET_TYPE_COMBOBOX,pdf.PDF_WIDGET_TYPE_LISTBOX)
                 for page in doc:
                     for field in page.widgets() or []:
-                        if str(field.xref) in values:
+                        identifier=str(field.xref);known.add(identifier)
+                        if identifier in values and field.field_type in synchronized and values[identifier]!=field.field_value:
+                            if field.field_name in shared and shared[field.field_name]!=values[identifier]:
+                                raise PDFError(f'Conflicting values for shared field {field.field_name}.')
+                            shared[field.field_name]=values[identifier]
+                if set(values)-known:raise PDFError('Form fields changed. Review the current fields before applying values.')
+                for page in doc:
+                    for field in page.widgets() or []:
+                        if str(field.xref) in values or (field.field_type in synchronized and field.field_name in shared):
+                            value=shared[field.field_name] if field.field_type in synchronized and field.field_name in shared else values[str(field.xref)]
+                            if value==field.field_value:continue
+                            if field.field_flags & pdf.PDF_FIELD_IS_READ_ONLY and value!=field.field_value:
+                                raise PDFError(f'Field {field.field_name} is read-only.')
+                            if field.text_maxlen and len(str(value))>field.text_maxlen:
+                                raise PDFError(f'Field {field.field_name} accepts at most {field.text_maxlen} characters.')
                             if field.field_type == pdf.PDF_WIDGET_TYPE_SIGNATURE:
                                 raise PDFError('Use certificate signing for signature fields.')
-                            field.field_value = values[str(field.xref)]
+                            field.field_value = value
                             field.update()
             elif operation == 'flatten_forms':
                 doc.bake(annots=False, widgets=True)
@@ -487,8 +503,12 @@ class Engine:
                                        'size': line['spans'][0]['size'] if line['spans'] else 12})
             return {'text': page.get_text(), 'blocks': blocks,
                     'forms': [{'id': str(w.xref), 'name': w.field_name, 'type': w.field_type_string,
-                               'value': w.field_value, 'rect': list(w.rect), 'choices':w.choice_values,
-                               'states':w.button_states()} for w in page.widgets() or []],
+                               'value': w.field_value, 'rect': list(w.rect*page.rotation_matrix), 'raw_rect':list(w.rect), 'rotation':page.rotation,
+                               'read_only':bool(w.field_flags & pdf.PDF_FIELD_IS_READ_ONLY),
+                               'multiline':bool(w.field_flags & pdf.PDF_TX_FIELD_IS_MULTILINE),
+                               'password':bool(w.field_flags & pdf.PDF_TX_FIELD_IS_PASSWORD),
+                               'multi_select':bool(w.field_flags & pdf.PDF_CH_FIELD_IS_MULTI_SELECT),
+                               'max_length':w.text_maxlen, 'choices':w.choice_values, 'states':w.button_states()} for w in page.widgets() or []],
                     'annotations': [{'id': a.xref, 'type': a.type[1], 'rect': list(a.rect), 'content': a.info.get('content','')}
                                     for a in page.annots() or []],
                     'images': [{'id':item['xref'],'rect':list(item['bbox']),'width':item['width'],'height':item['height']} for item in page.get_image_info(xrefs=True) if item['xref']],

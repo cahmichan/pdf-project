@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { GlobalWorkerOptions, getDocument, TextLayer, type PDFDocumentProxy, type RenderTask } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import 'pdfjs-dist/web/pdf_viewer.css';
+import { FormOverlay } from './FormOverlay';
 import { documentUrl, type DocumentInfo, type PageInfo } from './api';
 GlobalWorkerOptions.workerSrc = workerUrl;
 
-export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink,strokes,onStroke,inkWidth,inkColor}: {
+export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink,strokes,onStroke,inkWidth,inkColor,fields,fieldValues,onFieldChange,busy}: {
+  fields:PageInfo['forms'];fieldValues:Record<string,string|number>;onFieldChange:(id:string,value:string|number)=>void;busy:boolean;
   document:DocumentInfo;page:number;zoom:number;tool:string;
   onSelect:(rect:number[])=>void;selection:number[]|null;
   strokes:number[][][];onStroke:(stroke:number[][])=>void;inkWidth:number;inkColor:string;
@@ -78,6 +80,7 @@ export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink
     {choose && <div className="selection-surface" onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={()=>{start.current=null;setDrag(null);ink.current=[];setActiveInk([]);}}/>}
     {tool==='ink'&&<svg className="ink-preview" width={dimensions.width} height={dimensions.height} aria-label="Ink preview"><g fill="none" stroke={inkColor} strokeWidth={inkWidth*zoom} strokeLinecap="round" strokeLinejoin="round">{strokes.map((stroke,index)=><polyline key={index} points={stroke.map(p=>`${p[0]*dimensions.width/model.width},${p[1]*dimensions.height/model.height}`).join(' ')}/>)}<polyline points={activeInk.map(p=>p.join(',')).join(' ')}/></g></svg>}
     {shown && <div className={`selection-box ${tool==='redact'?'redaction':''}`} style={{left:shown[0],top:shown[1],width:shown[2]-shown[0],height:shown[3]-shown[1]}}/>}
+    {tool==='fill_forms'&&!loading&&<FormOverlay fields={fields} values={fieldValues} onChange={onFieldChange} width={dimensions.width} height={dimensions.height} pageWidth={model.width} pageHeight={model.height} disabled={busy}/>}
     {loading && <div className="page-loading">Rendering page…</div>}
     {error && <div className="page-error">Unable to render this page: {error}</div>}
   </div>;

@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English OCR model. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.9.0/Folio_0.9.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
+Latest verified installer milestone: `artifacts/releases/0.10.0/Folio_0.10.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
 
 ## Free Office runtime
 
@@ -49,3 +49,9 @@ For multiple output files, select Split into separate PDFs and Choose split meth
 In Pages, select Crop margins. Trim each visible edge independently in points, millimeters or inches; these margins follow the displayed rotation and apply to the chosen page range. Draw a rectangle keeps that area on the current page only. Reset to full page restores the MediaBox for the chosen range. A size readout previews the current page. Undo reverses the last operation. Cropping hides content rather than removing it.
 
 Page numbers supports a starting number and a format such as `Page {n} of {total}`. `{n}` is the sequence starting at your chosen value, `{total}` is the count of selected pages, `{page}` is the original working-document page number, and `{pages}` is the document page count. Numbering follows the ordered page range; repeated page numbers are used only once. Choose top/middle/bottom, left/center/right, font size, color, opacity and spacing. Text watermarks share the placement and opacity controls. Both currently use a single line of Latin text with standard Helvetica. Save a separate copy and review placement.
+
+## Fill forms directly on the page
+
+Choose Forms, then Fill existing fields. Supported text, multiline, checkbox, dropdown and single-select list fields become editable on the page, including on rotated/cropped pages. The sidebar and page controls share values. Read-only fields are disabled and text length limits apply. Values remain staged while navigating pages/tabs; Apply saves edits from visited pages as one working revision. Save a copy applies staged values before exporting. Working changes preserve the original.
+
+Unapplied drafts are held in memory, so apply/save before exiting. Closing a tab or undoing with pending values shows a warning. Signature fields use certificate signing; complex radio/multi-select fields and scripted calculations require further compatibility work. Review output in another viewer before using a completed form.

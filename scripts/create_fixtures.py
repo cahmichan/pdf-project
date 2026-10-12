@@ -31,3 +31,14 @@ for name,count in [('scan.pdf',1),('scan-many.pdf',40)]:
 from docx import Document
 office=Document();office.add_heading('Native Office import 31415',0);office.add_paragraph('Synthetic file for free-runtime verification.');office.save(folder/'office.docx')
 print(folder/'sample.pdf')
+# Four synthetic pages exercise every on-page control at each rotation.
+doc=pdf.open()
+for rotation in (0,90,180,270):
+    page=doc.new_page(width=400,height=500);page.set_cropbox(pdf.Rect(20,30,380,470));page.set_rotation(rotation)
+    specs=[('Name',pdf.PDF_WIDGET_TYPE_TEXT,[40,40,180,70],'Old',0),('Notes',pdf.PDF_WIDGET_TYPE_TEXT,[40,100,260,155],'Line one',pdf.PDF_TX_FIELD_IS_MULTILINE),('Consent',pdf.PDF_WIDGET_TYPE_CHECKBOX,[40,190,60,210],False,0),('Category',pdf.PDF_WIDGET_TYPE_COMBOBOX,[40,240,170,270],'First',0),('Selection',pdf.PDF_WIDGET_TYPE_LISTBOX,[200,240,320,300],'First',0),('Locked',pdf.PDF_WIDGET_TYPE_TEXT,[40,300,180,330],'Fixed',pdf.PDF_FIELD_IS_READ_ONLY)]
+    for name,kind,rect,value,flags in specs:
+        field=pdf.Widget();field.field_name=f'{name} {rotation}';field.field_type=kind;field.rect=pdf.Rect(rect);field.field_value=value;field.field_flags=flags
+        if name=='Name':field.text_maxlen=8
+        if kind in (pdf.PDF_WIDGET_TYPE_COMBOBOX,pdf.PDF_WIDGET_TYPE_LISTBOX):field.choice_values=['First','Second']
+        page.add_widget(field)
+doc.save(folder/'forms.pdf');doc.close()

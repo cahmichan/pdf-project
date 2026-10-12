@@ -42,6 +42,16 @@ try {
   await page.getByRole('button',{name:'Undo',exact:true}).click();
   await page.waitForFunction(()=>document.querySelectorAll('.page-item').length===3);
   await page.locator('.page-loading').waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'Forms',exact:true}).click();
+  await page.getByLabel('On-page Full name',{exact:true}).fill('Native form filled');
+  await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await page.waitForFunction(()=>document.querySelector('.status-bar')?.textContent.includes('Fill existing fields applied'));
+  await page.getByLabel('On-page Full name',{exact:true}).waitFor();
+  if(await page.getByLabel('On-page Full name',{exact:true}).inputValue()!=='Native form filled')throw new Error('Native form value did not persist.');
+  await page.screenshot({path:path.join(receiptPath,'on-page-form.png')});
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('input[aria-label="On-page Full name"]')?.value==='Example Person');
+  await page.locator('.mode-bar').getByRole('button',{name:'Pages',exact:true}).click();
   await page.getByLabel('Tool',{exact:true}).selectOption('crop');
   await page.getByLabel('Crop left',{exact:true}).fill('12');
   await page.getByRole('button',{name:'Apply to working copy'}).click();
@@ -121,7 +131,7 @@ try {
   },{fixture,folder:path.join(receiptPath,'split')});
   if(split.items.length!==2)throw new Error('Native split failed.');
   const digest=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,configured_free_archival_conversion:true,visual_page_organizer:true,split_pdf_reopen:true,precise_crop_and_custom_numbering:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
+  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,configured_free_archival_conversion:true,visual_page_organizer:true,split_pdf_reopen:true,precise_crop_and_custom_numbering:true,on_page_form_fill_and_undo:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
   if(errors.length)throw new Error(JSON.stringify(errors));
   fs.writeFileSync(path.join(receiptPath,'receipt.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 } finally {

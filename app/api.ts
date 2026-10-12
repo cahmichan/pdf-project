@@ -8,7 +8,7 @@ export interface DocumentInfo {
 }
 export interface PageInfo {
   text: string; blocks: {rect:number[];text:string;size:number}[];
-  forms: {id:string;name:string;type:string;value:string|number;rect:number[];choices?:string[];states?:{normal?:string[]}}[];
+  forms: {id:string;name:string;type:string;value:string|number;rect:number[];raw_rect?:number[];rotation?:number;read_only?:boolean;multiline?:boolean;password?:boolean;multi_select?:boolean;max_length?:number;choices?:string[];states?:{normal?:string[]}}[];
   annotations: {id:number;type:string;rect:number[];content:string}[];
   images: {id:number;rect:number[];width:number;height:number}[];
   links: {rect:number[];page:number;uri:string}[];

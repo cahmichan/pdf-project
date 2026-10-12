@@ -52,9 +52,9 @@ test('fill existing form and navigate bookmarks',async({page})=>{
   await page.getByRole('button',{name:'Continue',exact:true}).click();
   await expect(page.locator('.textLayer')).toContainText('Folio sample');
   await page.getByRole('button',{name:'Forms',exact:true}).click();
-  await page.getByLabel('Full name').fill('Updated from UI');
+  await page.locator('.tool-panel').getByLabel('Full name').fill('Updated from UI');
   await page.getByRole('button',{name:'Apply to working copy'}).click();
-  await expect(page.getByLabel('Full name')).toHaveValue('Updated from UI');
+  await expect(page.locator('.tool-panel').getByLabel('Full name')).toHaveValue('Updated from UI');
   await page.getByRole('button',{name:'Bookmarks',exact:true}).click();
   await page.getByRole('button',{name:'Final page',exact:true}).click();
   await expect(page.getByLabel('Current page')).toHaveValue('3');
@@ -341,4 +341,36 @@ test('precise crop controls, reset, selection and custom numbering save and reop
   const output=path.join(root,'artifacts','fixtures','ui-crop-numbered.pdf');await page.getByRole('button',{name:'Save a copy',exact:true}).click();await page.getByLabel('Absolute output path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('.status-bar')).toContainText(output);
   await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();
   await expect(page.locator('.textLayer')).toContainText('Page 9 / 3');await expect(page.locator('.textLayer')).toContainText('Review copy');expect(fs.readFileSync(fixture).equals(original)).toBeTruthy();
+});
+
+test('on-page forms fill text, notes, checkbox and choices at every rotation',async({page})=>{
+  const forms=path.join(root,'artifacts','fixtures','forms.pdf');const original=fs.readFileSync(forms);
+  await page.goto('/');await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(forms);await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await page.getByRole('button',{name:'Forms',exact:true}).click();
+  for(const [index,rotation] of [0,90,180,270].entries()){
+    await page.locator('.page-item').nth(index).click();const name=page.getByLabel(`On-page Name ${rotation}`,{exact:true});await expect(name).toBeVisible();await expect(name).toHaveAttribute('maxlength','8');
+    const paper=await page.locator('.paper').boundingBox();const bounds=await name.boundingBox();if(!paper||!bounds)throw new Error('No form bounds');
+    expect(bounds.width).toBeCloseTo(rotation===90||rotation===270?30:140,0);expect(bounds.height).toBeCloseTo(rotation===90||rotation===270?140:30,0);
+    await name.fill(`Value${rotation}`);
+    await page.getByLabel(`On-page Notes ${rotation}`,{exact:true}).fill('First line\nSecond line');await page.getByLabel(`On-page Consent ${rotation}`,{exact:true}).check();
+    await page.getByLabel(`On-page Category ${rotation}`,{exact:true}).selectOption('Second');await page.getByLabel(`On-page Selection ${rotation}`,{exact:true}).selectOption('Second');
+    await expect(page.getByLabel(`On-page Locked ${rotation}`,{exact:true})).toBeDisabled();
+    await page.getByRole('button',{name:'Apply to working copy'}).click();await expect(name).toHaveValue(`Value${rotation}`);
+    await expect(page.getByLabel(`On-page Consent ${rotation}`,{exact:true})).toBeChecked();await expect(page.getByLabel(`On-page Category ${rotation}`,{exact:true})).toHaveValue('Second');
+    await page.screenshot({path:`artifacts/ui/form-overlay-${rotation}.png`,fullPage:true});
+  }
+  const output=path.join(root,'artifacts','fixtures','ui-forms-filled.pdf');await page.getByRole('button',{name:'Save a copy',exact:true}).click();await page.getByLabel('Absolute output path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('.status-bar')).toContainText(output);
+  await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Forms',exact:true}).click();
+  await expect(page.getByLabel('On-page Name 0',{exact:true})).toHaveValue('Value0');await expect(page.getByLabel('On-page Consent 0',{exact:true})).toBeChecked();expect(fs.readFileSync(forms).equals(original)).toBeTruthy();
+});
+
+test('form drafts survive page and tab changes and save without a separate Apply',async({page})=>{
+  const forms=path.join(root,'artifacts','fixtures','forms.pdf');await page.goto('/');
+  await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(forms);await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Forms',exact:true}).click();
+  await page.getByLabel('On-page Name 0',{exact:true}).fill('Draft0');await page.locator('.page-item').nth(1).click();await page.getByLabel('On-page Name 90',{exact:true}).fill('Draft90');await page.locator('.page-item').first().click();await expect(page.getByLabel('On-page Name 0',{exact:true})).toHaveValue('Draft0');
+  await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(fixture);await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Forms',exact:true}).click();await page.getByLabel('On-page Full name',{exact:true}).fill('Other draft');
+  await page.locator('.tabs').getByRole('button',{name:'forms.pdf',exact:true}).click();await expect(page.getByLabel('On-page Name 0',{exact:true})).toHaveValue('Draft0');
+  const output=path.join(root,'artifacts','fixtures','ui-form-drafts.pdf');await page.getByRole('button',{name:'Save a copy',exact:true}).click();await page.getByLabel('Absolute output path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('.status-bar')).toContainText(output);
+  await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Forms',exact:true}).click();await expect(page.getByLabel('On-page Name 0',{exact:true})).toHaveValue('Draft0');await page.locator('.page-item').nth(1).click();await expect(page.getByLabel('On-page Name 90',{exact:true})).toHaveValue('Draft90');
+  await page.locator('.tabs').getByRole('button',{name:'sample.pdf',exact:true}).click();await expect(page.getByLabel('On-page Full name',{exact:true})).toHaveValue('Other draft');
 });

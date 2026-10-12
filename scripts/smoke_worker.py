@@ -72,6 +72,12 @@ try:
     info=command({'command':'apply','session':info['id'],'revision':info['revision'],'args':{'operation':'page_numbers','start':88,'number_format':'Packaged {n}/{total}','position':'top','align':'right'}})
     with pdf.open(info['path']) as checked:assert 'Packaged 88/3' in checked[0].get_text()
     receipt['precise_crop_and_custom_numbering']=True
+    fields=command({'command':'inspect_page','session':info['id'],'args':{'page':1}})['forms']
+    info=command({'command':'apply','session':info['id'],'revision':info['revision'],'args':{'operation':'fill_forms','values':{fields[0]['id']:'Packaged form filled'}}})
+    filled=command({'command':'export','session':info['id'],'args':{'path':str(output/'filled.pdf'),'overwrite':True}})
+    reopened=command({'command':'open','args':{'path':filled['path']}})
+    assert command({'command':'inspect_page','session':reopened['id'],'args':{'page':1}})['forms'][0]['value']=='Packaged form filled'
+    receipt['form_fill_reopen']=True
     import uuid
     identity=output/f'synthetic-{uuid.uuid4().hex}.pfx'
     command({'command':'create_identity','args':{'path':str(identity),'name':'Packaged synthetic identity','password':'Synthetic-smoke-only-123'}})

@@ -37,6 +37,61 @@ def apply(engine,session,operation,**args):
 
 
 @pytest.mark.parametrize('rotation',[0,90,180,270])
+def test_form_geometry_flags_fill_reopen_and_readonly_limits(tmp_path,rotation):
+    source=tmp_path/'interactive-fields.pdf';doc=pdf.open();page=doc.new_page(width=400,height=500)
+    page.set_cropbox(pdf.Rect(20,30,380,470));page.set_rotation(rotation)
+    specifications=[('Name',pdf.PDF_WIDGET_TYPE_TEXT,[40,40,180,70],'Old',0),
+                    ('Notes',pdf.PDF_WIDGET_TYPE_TEXT,[40,100,260,155],'Line one',pdf.PDF_TX_FIELD_IS_MULTILINE),
+                    ('Consent',pdf.PDF_WIDGET_TYPE_CHECKBOX,[40,190,60,210],False,0),
+                    ('Category',pdf.PDF_WIDGET_TYPE_COMBOBOX,[40,240,170,270],'First',0),
+                    ('Selection',pdf.PDF_WIDGET_TYPE_LISTBOX,[200,240,320,300],'First',0),
+                    ('Locked',pdf.PDF_WIDGET_TYPE_TEXT,[40,300,180,330],'Fixed',pdf.PDF_FIELD_IS_READ_ONLY)]
+    for name,kind,rect,value,flags in specifications:
+        widget=pdf.Widget();widget.field_name=name;widget.field_type=kind;widget.rect=pdf.Rect(rect);widget.field_value=value;widget.field_flags=flags
+        if name=='Name':widget.text_maxlen=8
+        if kind in (pdf.PDF_WIDGET_TYPE_COMBOBOX,pdf.PDF_WIDGET_TYPE_LISTBOX):widget.choice_values=['First','Second']
+        page.add_widget(widget)
+    doc.save(source);doc.close();baseline=fingerprint(source)
+    engine=Engine(tmp_path/'working');session=engine.open_file({'path':str(source)})
+    fields={field['name']:field for field in engine.inspect_page(engine.session(session['id']),{'page':1})['forms']}
+    assert fields['Notes']['multiline'] and fields['Locked']['read_only'] and fields['Name']['max_length']==8
+    with pdf.open(source) as doc:
+        page=doc[0]
+        for widget in page.widgets():assert fields[widget.field_name]['rect']==pytest.approx(list(widget.rect*page.rotation_matrix))
+    for name,value in [('Locked','Changed'),('Name','Too many characters')]:
+        with pytest.raises(PDFError):apply(engine,session,'fill_forms',values={fields[name]['id']:value})
+        assert engine.info(engine.session(session['id']))['revision']==session['revision']
+    values={fields[name]['id']:value for name,value in [('Name','NewName'),('Notes','First line\nSecond line'),('Consent','Yes'),('Category','Second'),('Selection','Second'),('Locked','Fixed')]}
+    session=apply(engine,session,'fill_forms',values=values)
+    output=tmp_path/'filled-fields.pdf';engine.export(engine.session(session['id']),{'path':str(output)})
+    with pdf.open(output) as doc:
+        actual={widget.field_name:widget.field_value for widget in doc[0].widgets()}
+        assert actual=={'Name':'NewName','Notes':'First line\nSecond line','Consent':'Yes','Category':'Second','Selection':'Second','Locked':'Fixed'}
+    with pdfium.PdfDocument(str(output)) as independent:
+        independent.init_forms();assert independent[0].render(scale=1,draw_annots=True).to_pil().size==((440,360) if rotation in (90,270) else (360,440))
+    undone=engine.dispatch({'command':'undo','session':session['id'],'revision':session['revision']})
+    with pdf.open(undone['path']) as doc:assert {widget.field_name:widget.field_value for widget in doc[0].widgets()}['Name']=='Old'
+    assert fingerprint(source)==baseline
+
+
+def test_shared_form_widgets_update_appearances_on_every_page(tmp_path):
+    source=tmp_path/'shared-fields.pdf';doc=pdf.open()
+    for index in range(2):
+        page=doc.new_page(width=300,height=300);field=pdf.Widget();field.field_name='SharedName';field.field_type=pdf.PDF_WIDGET_TYPE_TEXT
+        field.rect=pdf.Rect(30,50,250,90);field.field_value='Initial';field.text_fontsize=12;page.add_widget(field)
+    doc.save(source);doc.close();baseline=fingerprint(source)
+    engine=Engine(tmp_path/'working');session=engine.open_file({'path':str(source)})
+    field=engine.inspect_page(engine.session(session['id']),{'page':1})['forms'][0]
+    session=apply(engine,session,'fill_forms',values={field['id']:'Shared new value'})
+    with pdf.open(session['path']) as doc:
+        assert [widget.field_value for page in doc for widget in page.widgets()]==['Shared new value','Shared new value']
+    session=apply(engine,session,'flatten_forms')
+    with pdfium.PdfDocument(session['path']) as independent:
+        for page in independent:assert 'Shared new value' in page.get_textpage().get_text_range()
+    assert fingerprint(source)==baseline
+
+
+@pytest.mark.parametrize('rotation',[0,90,180,270])
 @pytest.mark.parametrize('origin',[(0,0),(-30,-60),(20,30)])
 @pytest.mark.parametrize('mode',['margins','selection'])
 def test_precise_crop_visual_pixels_offset_media_reset_and_save(tmp_path,rotation,origin,mode):
