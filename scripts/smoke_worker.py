@@ -50,6 +50,8 @@ try:
         assert 'Packaged direct heading' in checked[0].get_text() and 'Packaged click and type' in checked[0].get_text() and 'Folio sample document - page 1' not in checked[0].get_text()
     styled=command({'command':'open','args':{'path':str(root/'artifacts'/'fixtures'/'mixed-styles.pdf')}})
     block=command({'command':'inspect_page','session':styled['id'],'args':{'page':1}})['text_blocks'][0]
+    assert ''.join(run['text'] for run in block['runs'])==block['text']
+    assert next(run for run in block['runs'] if '$100' in run['text'])['font']=='Helvetica-Bold'
     styled=command({'command':'apply','session':styled['id'],'revision':styled['revision'],'args':{'operation':'edit_text','expected':block['text'],'source_rect':block['raw_rect'],'text':'Total: $125 paid','font':'original'}})
     with pdf.open(styled['path']) as checked:
         spans=[span for item in checked[0].get_text('dict')['blocks'] if item['type']==0 for line in item['lines'] for span in line['spans']]

@@ -15,7 +15,8 @@ export interface PageInfo {
   images: {id:number;rect:number[];width:number;height:number}[];
   links: {rect:number[];page:number;uri:string}[];
 }
-export interface TextBlock {id:number;text:string;rect:number[];raw_rect:number[];size:number;font:string;flags:number;color:string;rotation:number;horizontal:boolean;origin:number[];mixed_styles:boolean;}
+export interface TextRun {text:string;font:string;size:number;color:string;flags:number;offset:number;}
+export interface TextBlock {id:number;text:string;rect:number[];raw_rect:number[];size:number;font:string;flags:number;color:string;rotation:number;horizontal:boolean;origin:number[];mixed_styles:boolean;runs?:TextRun[];}
 let sequence = 0;
 export async function command<T>(name: string, document?: DocumentInfo | null, args: Record<string,unknown> = {}): Promise<T> {
   const request = {command:name, session:document?.id, revision:document?.revision, args, job:++sequence};

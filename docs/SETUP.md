@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English, Malay and Simplified Chinese OCR models. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.17.0/Folio_0.17.0_x64-setup.exe`. This build includes multilingual offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
+Latest verified installer milestone: `artifacts/releases/0.18.0/Folio_0.18.0_x64-setup.exe`. This build includes multilingual offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
 
 ## Free Office runtime
 
@@ -76,7 +76,7 @@ Original embedded fonts are reused when glyph coverage permits. Horizontal parag
 
 In Scan photos, choose Use camera, then Start camera. Grant the system prompt when requested. Capture photo can add multiple pages. Stop camera releases the video stream; Done returns to corner review/enhancement. Switching cameras requires stopping first. Audio is never requested. Camera frames are kept as private local photos under the Folio app-data scan-captures folder; deletion/retention controls remain work. Synthetic-camera tests cover capture, denied permission and closing while permission is pending. Synthetic camera capture/create/export/reopen and track release also passed in the bundled WebView2. Real camera permission/capture remains a manual acceptance check.
 
-Styled editing supports up to 5,000 characters per paragraph. Review ambiguous replacements and missing source glyphs. The typing control shows the first style; review the formatted result after Apply. Opacity/decorations, advanced shaping, live rich formatting and surrounding-layout movement need further compatibility work.
+Styled editing supports up to 5,000 characters per paragraph. Review ambiguous replacements and missing source glyphs. From 0.18, the typing surface shows mixed styles; review the applied PDF for exact fonts and spacing. Opacity/decorations, advanced shaping, exact live font rendering and surrounding-layout movement need further compatibility work.
 
 ## Mixed-page OCR (0.15)
 
@@ -97,3 +97,11 @@ After reviewing document corners, choose Suggest straightening to propose a smal
 Angle detection examines local dark-pixel alignment, not document semantics. Blank or low-confidence pages keep zero; columns, diagrams, borders, uneven backgrounds and curved text may require manual adjustment. This straightens imported/captured photo output, not an existing PDF's invisible OCR layer. Version 0.17 passed full packaged/native checks; earlier releases remain preserved.
 
 Version 0.17.0 passed 187 Python tests, 24 browser workflows, frozen-worker checks and all six native suites. The scanner angle preview/reset was exercised in WebView2 with synthetic camera input; corrected scanner output was saved and independently reopened. Review angle suggestions before creating the PDF, especially for diagrams/columns/curved text. Physical printer/scanner/real camera and native picker/installer dialogs still need manual acceptance.
+
+## Rich live text (0.18)
+
+The on-page editor now displays mixed font weight, italic style, size, color and baseline shifts while typing. Replacement characters inherit the replaced or adjacent style; size changes scale relative sizes, and color changes apply to the paragraph. Ctrl+Z/Ctrl+Y undo/redo edits within the current editor; document undo remains available after applying. Enter inserts a new line; Ctrl+Enter applies. Paste inserts literal text, including HTML-looking text, rather than active HTML. Tab moves into the floating formatting controls. Review the applied PDF for exact font shapes and spacing.
+
+The browser currently uses serif/sans/monospace font representations; saved PDFs still reuse supported original embedded fonts. Exact embedded-font live rendering, complex shaping/bidi, selected-run formatting and surrounding-layout movement remain further work. Styled paragraphs are limited to 5,000 characters. Draft undo history resets when the editor remounts; apply/save before closing. Synthetic composition tests cover event handling, while actual Windows IME typing still needs a manual check. Version 0.18 passed packaged/native acceptance; earlier releases remain preserved.
+
+Version 0.18.0 passed 189 Python tests, 25 browser workflows plus an enhanced formatting-undo check, frozen-worker checks and six native suites. Native checks verify live mixed styles and draft undo/redo before applying, then saved fonts/styles and document undo. Resetting the paragraph color to its first source color restores original run colors; a dedicated same-color uniform override remains work. Exact live embedded fonts/spacing and actual Windows IME require further work/manual review. Hardware and installed dialogs remain manual acceptance gates.

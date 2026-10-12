@@ -12,11 +12,16 @@ def paragraphs(page):
         spans=[span for line in block['lines'] for span in line['spans']]
         if not spans:continue
         first=spans[0];raw=pdf.Rect(block['bbox'])
+        runs=[]
+        for number,line in enumerate(block['lines']):
+            if number:runs.append({**runs[-1],'text':'\n'})
+            baseline=line['spans'][0]['origin'][1]
+            runs.extend({'text':span['text'],'font':span['font'],'size':span['size'],'color':'#'+format(span['color'],'06x'),'flags':span['flags'],'offset':span['origin'][1]-baseline} for span in line['spans'])
         result.append({'id':index,'text':'\n'.join(''.join(span['text'] for span in line['spans']) for line in block['lines']),
                        'rect':list(raw*page.rotation_matrix),'raw_rect':list(raw),'size':first['size'],
                        'font':first['font'],'flags':first['flags'],'color':'#'+format(first['color'],'06x'),
                        'rotation':page.rotation,'horizontal':all(abs(line['dir'][0]-1)<.01 and abs(line['dir'][1])<.01 for line in block['lines']),
-                       'origin':list(first['origin']),'mixed_styles':len({(span['font'],round(span['size'],2),span['color']) for span in spans})>1})
+                       'origin':list(first['origin']),'runs':runs,'mixed_styles':len({(span['font'],round(span['size'],2),span['color']) for span in spans})>1})
     return result
 
 
