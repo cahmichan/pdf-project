@@ -4,6 +4,7 @@ export interface DocumentInfo {
   dirty: boolean; page_count: number; can_undo: boolean; can_redo: boolean;
   signature_fields: boolean; metadata: Record<string,string>;
   bookmarks: [number,string,number][];
+  ocr_report?:{pages_processed:number;pages_skipped:number;words_added:number};
   pages: {width:number;height:number;rotation:number;cropbox:number[]}[];
 }
 export interface PageInfo {

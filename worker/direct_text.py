@@ -55,6 +55,8 @@ def edit(doc,page,args):
         if len(matches)!=1:raise PDFError('The selected text changed. Select it again before editing.')
         original=matches[0]
         if not original['horizontal']:raise PDFError('Text with an angled baseline needs further editing support. Add new text or choose a horizontal paragraph.')
+        if any(pdf.Rect(original['raw_rect']).intersects(pdf.Rect(image['bbox'])) for image in page.get_image_info()):
+            raise PDFError('This text overlaps a scan or image. Editing visible scan text requires reconstruction; changing its hidden OCR layer is insufficient.')
     text=str(args.get('text','')).replace('\r\n','\n').replace('\r','\n').replace('\t','    ')
     if adding and not text.strip():raise PDFError('Type text at the insertion point before applying.')
     if len(text)>20000:raise PDFError('Edit at most 20,000 characters in one paragraph.')
@@ -80,7 +82,6 @@ def edit(doc,page,args):
         obstacles=[pdf.Rect(item['raw_rect']) for item in items if item['id']!=original['id']]
         rotation=0
         old=pdf.Rect(original['raw_rect'])
-        if any(old.intersects(pdf.Rect(image['bbox'])) for image in page.get_image_info()):raise PDFError('This text overlaps a scan or image. Scan reconstruction requires a separate workflow.')
         if any(old.intersects(other) for other in obstacles):raise PDFError('Overlapping text needs further editing support. The original paragraph has not been changed.')
     # Let typing grow automatically into free space, bounded by neighboring text.
     for other in obstacles:

@@ -13,13 +13,13 @@ This is a live implementation tracker, not a parity claim. Evidence is recorded 
 | Existing text | 0.14 adds direct click-to-edit paragraphs and click-to-add text, font/size/color toolbar, staging/save/cancel, embedded-font reuse, baseline preservation, mixed font/color/relative-size retention and measured wrapping into free space; no rectangle drawing for text | Rich live preview, style inheritance ambiguities, opacity/decorations/anchors, missing-glyph fallback, advanced shaping/angled baselines, moving surrounding layout and scan reconstruction |
 | Security | AES-256 export, password open/decrypt, rectangular redaction plus auxiliary scrub, incremental certificate signing, personal encrypted identities, public certificate export and offline signature inspection | Broader redaction fixtures, permissions controls, visible certificate appearance, trusted timestamps/revocation assurance |
 | Compression/repair | Lossless rewrite, screen/print lossy image presets, readable-PDF recovery | Quality preview, qpdf diagnostics |
-| OCR | English offline OCR adds hidden searchable text, preserves visible page pixels | More languages, deskew, mixed-page OCR and scan editing |
+| OCR | English offline OCR adds hidden searchable text and preserves visible pixels; 0.15 adds mixed-page masking, duplicate suppression, mode/DPI controls and result counts | More languages, deskew, overlapping/touching text, complex images and visible scan editing |
 | Office export | Editable text DOCX, editable text/image PPTX, image-slide PPTX, detected-table XLSX | Better reconstruction, broader fixtures, LibreOffice validation |
 | Office import | Free LibreOffice DOCX/XLSX/PPTX import tested; ODF/RTF/TXT supported by adapter | Broader layout fixtures; configured runtime must remain available |
 | Compare/archival | Positional text/pixel comparison with standalone HTML report; static PDF/A-2b export and independent veraPDF validation/XML report | Alignment of inserted/reordered pages; other archival conformance levels, broader layout/color fixtures |
 | Markdown | Plain reading-order text export | Structural heading/table/list preservation |
 | Workflows/scanner | Saved presets, batch jobs, per-file recovery receipts, failure continuation; 0.13 photo scanning with boundary detection/review, perspective crop, enhancement, rotation, ordered multi-page PDF and explicit camera capture (synthetic browser/native verification passed) | Real camera permission/capture, native photo picker/installed UI acceptance, broader lighting/clutter fixtures, physical scanner integration and curved-page dewarping |
 | Intelligence | Not implemented yet | Free local models, hardware/license evaluation, quality gates |
-| Installer | 0.14.0 installer, bundled OCR, Office adapter and native WebView2/edit/link/preview/cancel/batch smoke passed | Installed UI, actual print/scanner acceptance |
+| Installer | 0.15.0 installer, bundled OCR, Office adapter and native WebView2/edit/link/preview/cancel/batch smoke passed | Installed UI, actual print/scanner acceptance |
 
 No personal files have been used for automated tests. Synthetic fixtures only.

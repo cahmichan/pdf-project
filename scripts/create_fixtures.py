@@ -66,3 +66,8 @@ mixed=pdf.open();mixed_page=mixed.new_page(width=500,height=700);mixed_x=40
 for mixed_text,mixed_font,mixed_size,mixed_color in [("Total: ","helv",14,(0,0,0)),("$100","hebo",18,(.8,0,0)),(" paid","tiit",14,(0,.3,0))]:
  mixed_page.insert_text((mixed_x,80),mixed_text,fontname=mixed_font,fontsize=mixed_size,color=mixed_color);mixed_x+=pdf.get_text_length(mixed_text,fontname=mixed_font,fontsize=mixed_size)
 mixed_page.insert_text((40,300),"Keep neighbor",fontsize=12);mixed.save(folder/"mixed-styles.pdf");mixed.close()
+
+# Digital heading/footer plus a rasterized invoice region.
+ocr_image_doc=pdf.open();ocr_image_page=ocr_image_doc.new_page(width=400,height=250);ocr_image_page.insert_text((35,75),"Scanned invoice 24680",fontsize=24);ocr_image_page.insert_text((35,145),"Mixed content recognition",fontsize=20)
+ocr_image=ocr_image_page.get_pixmap(dpi=200).tobytes("png");ocr_image_doc.close()
+ocr_mixed=pdf.open();ocr_mixed_page=ocr_mixed.new_page(width=500,height=700);ocr_mixed_page.insert_text((35,70),"Digital heading 13579",fontsize=20);ocr_mixed_page.insert_image(pdf.Rect(30,140,430,390),stream=ocr_image);ocr_mixed_page.insert_text((35,500),"Digital footer remains",fontsize=16);ocr_mixed.save(folder/"mixed-ocr.pdf");ocr_mixed.close()

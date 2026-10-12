@@ -54,6 +54,12 @@ try:
     with pdf.open(styled['path']) as checked:
         spans=[span for item in checked[0].get_text('dict')['blocks'] if item['type']==0 for line in item['lines'] for span in line['spans']]
         amount=next(span for span in spans if '$125' in span['text']);assert amount['font']=='Helvetica-Bold' and abs(amount['size']-18)<.1 and amount['color']&0xff0000
+    mixed_scan=command({'command':'open','args':{'path':str(root/'artifacts'/'fixtures'/'mixed-ocr.pdf')}})
+    mixed_scan=command({'command':'apply','session':mixed_scan['id'],'revision':mixed_scan['revision'],'args':{'operation':'ocr'}})
+    assert mixed_scan['ocr_report']['words_added']>0
+    mixed_scan=command({'command':'apply','session':mixed_scan['id'],'revision':mixed_scan['revision'],'args':{'operation':'ocr'}})
+    assert mixed_scan['ocr_report']['words_added']==0
+    with pdf.open(mixed_scan['path']) as checked:assert checked[0].get_text().count('24680')==1 and checked[0].get_text().count('13579')==1
     capabilities=command({'command':'capabilities'})
     assert capabilities['ocr_languages']==['eng']
     scan=command({'command':'open','args':{'path':str(root/'artifacts'/'fixtures'/'scan.pdf')}})
@@ -106,6 +112,7 @@ try:
     receipt['camera_frame_import']=True
     receipt['direct_text_edit_insert_reopen']=True
     receipt['original_mixed_styles_preserved']=True
+    receipt['mixed_page_ocr_no_duplicates']=True
     processed=command({'command':'scan_preview','args':{**photo,'filter':'black_white'}})
     assert processed['preview'].startswith('data:image/jpeg;base64,')
     photo_document=command({'command':'scan_create','args':{'pages':[{**photo,'filter':'document'},{**photo,'filter':'black_white','rotation':90}]}})

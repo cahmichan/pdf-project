@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English OCR model. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.14.0/Folio_0.14.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
+Latest verified installer milestone: `artifacts/releases/0.15.0/Folio_0.15.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
 
 ## Free Office runtime
 
@@ -77,3 +77,9 @@ Original embedded fonts are reused when glyph coverage permits. Horizontal parag
 In Scan photos, choose Use camera, then Start camera. Grant the system prompt when requested. Capture photo can add multiple pages. Stop camera releases the video stream; Done returns to corner review/enhancement. Switching cameras requires stopping first. Audio is never requested. Camera frames are kept as private local photos under the Folio app-data scan-captures folder; deletion/retention controls remain work. Synthetic-camera tests cover capture, denied permission and closing while permission is pending. Synthetic camera capture/create/export/reopen and track release also passed in the bundled WebView2. Real camera permission/capture remains a manual acceptance check.
 
 Styled editing supports up to 5,000 characters per paragraph. Review ambiguous replacements and missing source glyphs. The typing control shows the first style; review the formatted result after Apply. Opacity/decorations, advanced shaping, live rich formatting and surrounding-layout movement need further compatibility work.
+
+## Mixed-page OCR (0.15)
+
+In Convert, choose Make scanned PDF searchable. Add missing text on mixed pages preserves existing digital words and recognizes remaining raster content; pure digital pages are skipped. Skip pages with existing text retains the faster legacy behavior. Choose a page range and 100-400 DPI, then Apply. Review recognition, processed/skipped counts and added words before saving a separate copy. Batch presets offer the same OCR mode/resolution controls.
+
+The recognition image masks existing words; only an invisible text layer is added to the working PDF. Visible page pixels remain unchanged. Repeated recognition suppresses duplicates. Large page/DPI combinations exceeding 40 million pixels reject before rendering. OCR remains English-only. Touching/overlapping text, low-resolution images and recognition spelling need review. Changing invisible OCR text does not change visible scan words; scan reconstruction remains work. Version 0.15 passed packaged/browser/native OCR checks, including independent exact-pixel comparison after saved reopen.

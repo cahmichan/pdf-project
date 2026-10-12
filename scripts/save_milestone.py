@@ -41,6 +41,10 @@ styled=evidence/'native-smoke'/'styled-text-receipt.json'
 if styled.exists():
     checked=json.loads(styled.read_text(encoding='utf-8'))
     assert checked['passed'] and hashes['folio.exe']==checked['executable_sha256'] and hashes['pdf-worker.exe']==checked['worker_sha256'], 'Native styled-text receipt is for another build'
+mixed_ocr=evidence/'native-smoke'/'mixed-ocr-receipt.json'
+if mixed_ocr.exists():
+    checked=json.loads(mixed_ocr.read_text(encoding='utf-8'))
+    assert checked['passed'] and hashes['folio.exe']==checked['executable_sha256'] and hashes['pdf-worker.exe']==checked['worker_sha256'], 'Native mixed OCR receipt is for another build'
 checkpoint=subprocess.run(['git','rev-parse','HEAD'],cwd=root,capture_output=True,text=True)
 receipt={'version':version,'source_checkpoint':checkpoint.stdout.strip() if checkpoint.returncode==0 else None,'release_binary_sha256':hashes,'native_smoke':native,'untracked_data_files_excluded':len(untracked),'note':'Original receipts copied without modification. Binary hashes were recorded before any subsequent rebuild. Untracked non-source inputs remain untouched and are excluded from the source checkpoint and release evidence.'}
 (evidence/'milestone.json').write_text(json.dumps(receipt,indent=2),encoding='utf-8')

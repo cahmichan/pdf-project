@@ -270,6 +270,7 @@ class Engine:
 
     def apply(self, session: dict, args: dict) -> dict:
         operation = args['operation']
+        ocr_report={'pages_processed':0,'pages_skipped':0,'words_added':0}
 
         def mutate(doc: pdf.Document):
             if doc.get_sigflags() > 0 and not args.get('allow_signature_changes'):
@@ -346,25 +347,12 @@ class Engine:
                 dpi = int(args.get('dpi', 200))
                 if not 100 <= dpi <= 400:
                     raise PDFError('OCR resolution must be between 100 and 400 DPI.')
-                for offset, n in enumerate(selected):
-                    self.progress(offset / len(selected), f'OCR page {n + 1} ({offset + 1}/{len(selected)})')
-                    page = doc[n]
-                    # Keep digital text pages intact and prevent duplicate OCR text.
-                    if page.get_text().strip():
-                        continue
-                    rotation = page.rotation
-                    page.set_rotation(0)
-                    try:
-                        raster = page.get_pixmap(dpi=dpi, colorspace=pdf.csRGB, alpha=False)
-                        with pdf.open('pdf', raster.pdfocr_tobytes(language=language, tessdata=str(data))) as recognized:
-                            if not recognized[0].get_text().strip():
-                                continue
-                            # Import only invisible recognized text, preserving original images/vectors.
-                            for item in recognized[0].get_images():
-                                recognized[0].delete_image(item[0])
-                            page.show_pdf_page(page.rect, recognized, 0)
-                    finally:
-                        page.set_rotation(rotation)
+                from ocr import add_missing_text
+                for offset,n in enumerate(dict.fromkeys(selected)):
+                    self.progress(offset/len(selected),f'OCR page {n+1} ({offset+1}/{len(selected)})')
+                    recognized=add_missing_text(doc[n],language,data,dpi,args.get('ocr_mode','missing'))
+                    ocr_report['pages_skipped' if recognized['skipped'] else 'pages_processed']+=1
+                    ocr_report['words_added']+=recognized['words_added']
             else:
                 n = int(args.get('page', 1)) - 1
                 if n < 0 or n >= len(doc):
@@ -512,7 +500,9 @@ class Engine:
                     page.add_widget(widget)
                 else:
                     raise PDFError(f'Unknown operation: {operation}')
-        return self.commit(session, mutate)
+        result=self.commit(session, mutate)
+        if operation=='ocr':result['ocr_report']=ocr_report
+        return result
 
     def inspect_page(self, session: dict, args: dict) -> dict:
         with pdf.open(self.current(session)) as doc:
