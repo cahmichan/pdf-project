@@ -85,6 +85,15 @@ try:
     radio_opened=command({'command':'open','args':{'path':radios['path']}})
     assert [field['value'] for field in command({'command':'inspect_page','session':radio_opened['id'],'args':{'page':1}})['forms'] if field['type']=='RadioButton']==['Off','O2']
     receipt['radio_group_create_fill_reopen']=True
+    photo=command({'command':'scan_prepare','args':{'path':str(root/'artifacts'/'fixtures'/'scan-photo.png')}})
+    assert photo['detected']
+    processed=command({'command':'scan_preview','args':{**photo,'filter':'black_white'}})
+    assert processed['preview'].startswith('data:image/jpeg;base64,')
+    photo_document=command({'command':'scan_create','args':{'pages':[{**photo,'filter':'document'},{**photo,'filter':'black_white','rotation':90}]}})
+    photo_output=command({'command':'export','session':photo_document['id'],'args':{'path':str(output/'photo-scanned.pdf'),'overwrite':True}})
+    photo_reopen=command({'command':'open','args':{'path':photo_output['path']}})
+    assert photo_reopen['page_count']==2
+    receipt['photo_scan_perspective_enhance_reopen']=True
     import uuid
     identity=output/f'synthetic-{uuid.uuid4().hex}.pfx'
     command({'command':'create_identity','args':{'path':str(identity),'name':'Packaged synthetic identity','password':'Synthetic-smoke-only-123'}})

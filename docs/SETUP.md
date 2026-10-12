@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English OCR model. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.11.0/Folio_0.11.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
+Latest verified installer milestone: `artifacts/releases/0.12.0/Folio_0.12.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
 
 ## Free Office runtime
 
@@ -59,3 +59,9 @@ Unapplied drafts are held in memory, so apply/save before exiting. Closing a tab
 Version 0.10.1 also applies staged form values before splitting, exporting page images or comparing the current PDF. Unusual field names such as `__proto__`, `constructor` and `toString` are supported. Native smoke runs an additional draft/print-preview/undo fixture; it does not open the physical print dialog or submit a print job.
 
 Version 0.11 adds standard radio groups under Create form field: choose Radio group, enter distinct option labels on separate lines, and draw a rectangle. Fill existing fields selects one option per group. Review advanced hierarchical forms separately; these need further compatibility work.
+
+## Photo document scanning (0.12)
+
+On Home, choose Scan photos, then Add photos. Import individual JPG/PNG/TIFF/BMP pictures, including photos copied from a phone. Review the detected boundary; drag the four handles or enter X/Y percentages in top-left, top-right, bottom-right, bottom-left order. If detection misses the paper, adjust manually or use the whole photo. Preview perspective correction with Original color, Grayscale, Clean document or Black and white. Rotate and move pages earlier/later as needed. Create scanned PDF opens a working copy; review, optionally run Convert → Make scanned PDF searchable for offline English OCR, then Save a copy. Original photos remain unchanged.
+
+Photo limits: 40 million input pixels, corrected output up to 4000 pixels per edge/16 million total, and 100 photos per PDF. Multi-frame image files need individual frames first. Review fine print, uneven lighting and automatic corners; filters can alter fine detail. Curved-page dewarping, camera capture and physical scanner control remain future work. Packaged/native scanning commands and the complete browser workflow passed. Native OS photo selection and installed UI remain manual acceptance checks.

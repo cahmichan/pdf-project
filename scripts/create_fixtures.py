@@ -46,3 +46,13 @@ doc=pdf.open();page=doc.new_page(width=500,height=700)
 for index,name in enumerate(('__proto__','constructor','toString')):
     field=pdf.Widget();field.field_name=name;field.field_type=pdf.PDF_WIDGET_TYPE_TEXT;field.rect=pdf.Rect(40,80+index*90,400,115+index*90);field.field_value='Initial';field.text_fontsize=14;page.add_widget(field)
 doc.save(folder/'unusual-fields.pdf');doc.close()
+
+# Phone-like perspective photo for the local document scanner.
+import cv2
+import numpy as np
+from PIL import Image
+photo_page=np.full((700,500,3),245,np.uint8)
+cv2.putText(photo_page,"SCAN TEST",(40,90),cv2.FONT_HERSHEY_SIMPLEX,1.4,(20,20,20),3)
+for y in range(140,600,45):cv2.line(photo_page,(40,y),(440,y),(60,60,60),3)
+photo_transform=cv2.getPerspectiveTransform(np.float32([[0,0],[499,0],[499,699],[0,699]]),np.float32([[130,100],[700,145],[650,850],[90,790]]))
+Image.fromarray(cv2.warpPerspective(photo_page,photo_transform,(800,950),borderValue=(35,50,65))).save(folder/"scan-photo.png")

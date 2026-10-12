@@ -18,8 +18,8 @@ This is a live implementation tracker, not a parity claim. Evidence is recorded 
 | Office import | Free LibreOffice DOCX/XLSX/PPTX import tested; ODF/RTF/TXT supported by adapter | Broader layout fixtures; configured runtime must remain available |
 | Compare/archival | Positional text/pixel comparison with standalone HTML report; static PDF/A-2b export and independent veraPDF validation/XML report | Alignment of inserted/reordered pages; other archival conformance levels, broader layout/color fixtures |
 | Markdown | Plain reading-order text export | Structural heading/table/list preservation |
-| Workflows/scanner | Saved presets, batch jobs, per-file recovery receipts, failure continuation | Requested CamScanner-style photo scanning: corner detection/review, perspective crop, enhancement, multi-page PDF; physical scanner integration |
+| Workflows/scanner | Saved presets, batch jobs, per-file recovery receipts, failure continuation; 0.12 photo scanning with boundary detection/review, perspective crop, enhancement, rotation and ordered multi-page PDF | Native photo picker/installed UI acceptance, broader lighting/clutter fixtures, camera capture, physical scanner integration and curved-page dewarping |
 | Intelligence | Not implemented yet | Free local models, hardware/license evaluation, quality gates |
-| Installer | 0.11.0 installer, bundled OCR, Office adapter and native WebView2/edit/link/preview/cancel/batch smoke passed | Installed UI, actual print/scanner acceptance |
+| Installer | 0.12.0 installer, bundled OCR, Office adapter and native WebView2/edit/link/preview/cancel/batch smoke passed | Installed UI, actual print/scanner acceptance |
 
 No personal files have been used for automated tests. Synthetic fixtures only.

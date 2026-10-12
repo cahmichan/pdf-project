@@ -5,6 +5,50 @@ import { execFileSync } from 'node:child_process';
 const root=process.cwd();
 const fixture=path.join(root,'artifacts','fixtures','sample.pdf');
 
+test('photo scanner reviews corners, enhances, orders pages and saves a reopened PDF',async({page})=>{
+  const photo=path.join(root,'artifacts','fixtures','scan-photo.png');
+  const output=path.join(root,'artifacts','fixtures','ui-scanned.pdf');
+  execFileSync(path.join(root,'.venv','Scripts','python.exe'),['-c',"import runpy,sys; from pathlib import Path; runpy.run_path('tests/test_scanning.py')['photo'](Path(sys.argv[1]))",photo],{cwd:root});
+  const original=fs.readFileSync(photo);
+  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.goto('/');
+  await page.getByRole('button',{name:'Scan photos',exact:true}).click();
+  async function add(){await page.getByRole('button',{name:'Add photos',exact:true}).click();await page.getByLabel('Absolute local file path').fill(photo);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.getByRole('button',{name:'Preview scan',exact:true})).toBeEnabled();}
+  await add();
+  await expect(page.getByText('A document boundary was detected.',{exact:false})).toBeVisible();
+  await page.getByLabel('Scan enhancement').selectOption('black_white');
+  await page.getByRole('button',{name:'Preview scan',exact:true}).click();
+  await expect(page.getByAltText('Corrected scan preview')).toBeVisible();
+  const x=page.getByLabel('Top left X percent');const prior=await x.inputValue();
+  await x.fill('99');
+  await page.getByRole('button',{name:'Preview scan',exact:true}).click();
+  await expect(page.getByRole('alert')).toContainText('Corners must surround');
+  await x.fill(prior);
+  await page.getByRole('button',{name:'Preview scan',exact:true}).click();
+  await expect(page.getByAltText('Corrected scan preview')).toBeVisible();
+  await add();await page.getByLabel('Scan page').selectOption('1');
+  await page.getByLabel('Scan rotation').selectOption('90');
+  await page.getByRole('button',{name:'Move earlier',exact:true}).click();
+  await expect(page.getByLabel('Scan page')).toHaveValue('0');
+  await page.getByRole('button',{name:'Preview scan',exact:true}).click();
+  await expect(page.getByAltText('Corrected scan preview')).toBeVisible();
+  await page.screenshot({path:'artifacts/ui/photo-scanner.png',fullPage:true});
+  await page.getByRole('button',{name:'Create scanned PDF',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Scan photos to PDF'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:/Page 2 thumbnail/})).toBeVisible();
+  await expect(page.locator('.page-loading')).toBeHidden();
+  await page.getByRole('button',{name:'Save a copy',exact:true}).click();
+  await page.getByLabel('Absolute output path').fill(output);
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.locator('.status-bar')).toContainText('Saved');
+  execFileSync(path.join(root,'.venv','Scripts','python.exe'),['-c',"import pypdfium2 as p,sys; d=p.PdfDocument(sys.argv[1]); assert len(d)==2; assert d[0].get_width()>d[0].get_height(); assert d[1].get_height()>d[1].get_width(); assert min(d[0].render(scale=1).to_pil().convert('L').getextrema())<80; d.close()",output],{cwd:root});
+  await page.getByRole('button',{name:'Open PDF',exact:true}).click();
+  await page.getByLabel('Absolute local file path').fill(output);
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.locator('.page-error')).toHaveCount(0);
+  expect(fs.readFileSync(photo).equals(original)).toBeTruthy();expect(errors).toEqual([]);
+});
+
 test('home, PDF render, search, edit, history, and safe export',async({page})=>{
   const errors:string[]=[];
   page.on('pageerror',e=>errors.push(e.message));

@@ -681,6 +681,11 @@ class Engine:
         command = request['command']; args = request.get('args', {})
         if command == 'startup':
             return None
+        if command in ('scan_prepare', 'scan_preview', 'scan_create'):
+            from scanning import prepare, preview, create
+            if command == 'scan_prepare':return prepare(args)
+            if command == 'scan_preview':return preview(args)
+            return create(self,args)
         if command.startswith('preset_') or command.startswith('batch_'):
             from workflows import list_presets,save_preset,delete_preset,run_batch,history
             if command=='preset_list':return list_presets(self.root)

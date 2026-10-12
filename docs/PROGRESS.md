@@ -230,3 +230,18 @@ User requested a CamScanner-style scan image function. Add a local photo-to-docu
 - Installer: artifacts/releases/0.11.0/Folio_0.11.0_x64-setup.exe, 57,336,897 bytes, SHA256 9f0b3c4138be0d871880dd7b3de936b56530f7a5688ea04c043a53e2bde13780.
 - Standard radio groups are supported; advanced hierarchical/multi-select/export-label compatibility, persistent unapplied drafts, physical printer/scanner and installed/high-DPI acceptance remain separate work. Full goal remains active.
 - Next priority: requested photo document scanning with perspective crop and enhancement, followed by remaining roadmap.
+
+## 0.12.0 photo scanner candidate (12 October 2026)
+
+- Added local photo import with EXIF orientation/transparency handling, automatic quadrilateral boundary proposal and full-photo fallback. Review/drag or keyboard-adjust all four corners; crossed/outside/tiny crops reject. Perspective warp preserves document proportions, with rotation, original color, grayscale, background-normalized document and adaptive black/white previews.
+- Ordered multi-photo output opens an unsaved PDF session for review, existing offline OCR and Save a copy. Inputs remain intact and hash checks reject changed source photos. Failed creation does not publish a partial session. 40 MP input/16 MP corrected output/100 page limits keep processing bounded. Multi-frame TIFF is explicitly rejected; individual photos supported.
+- Six backend tests passed detection/perspective/filter/rotation/EXIF/fallback/rejection/source-preservation and independent PDFium save/reopen. Initial browser workflow passed corner validation, enhancement preview, ordering, save and independent reopen; screenshot review prompted smaller image display and sticky actions, with final gates still pending.
+- Uses project-local Apache-licensed OpenCV and NumPy; license collection and packaging need refresh. Camera capture, scanner hardware, curved-book dewarping and unusually lit/cluttered photos remain separate compatibility work. Latest verified installer remains 0.11.0.
+
+## 0.12.0 verified milestone (12 October 2026)
+
+- All 133 Python tests passed (71.00s), all 16 browser workflows passed (93.27s), frozen-worker photo detection/perspective/enhancement/create/export/reopen passed without developer Python, and frontend/Rust/NSIS packaging passed. License resources include OpenCV/NumPy and bundled third-party notices (126 packages).
+- Actual bundled WebView2 passed photo scanning commands with corrected portrait/landscape page order and PDF reopen, alongside the full standard native suite and separate form draft suite. Both receipts match the same application/worker hashes and report no page errors. Browser scanner UI screenshot reviewed; end-to-end corner validation, preview, page ordering and Save/reopen are automated in browser mode.
+- An additional native UI probe attempted a fixture file-picker shim but stalled before image import; Tauri invoke cannot be replaced by that approach. The probe is not acceptance evidence. Native OS photo picker, installed UI, high-DPI and representative personal photos remain manual gates. No user-installed Folio process was stopped.
+- Installer: artifacts/releases/0.12.0/Folio_0.12.0_x64-setup.exe, 111,630,348 bytes; SHA256 9e9ef7765ffa861ff98a1e17744b250f31ce96aa69eac96d9fd761e895775626.
+- Photo scanning is implemented locally; camera capture, physical scanner control, curved-book dewarping and broader lighting/clutter fixtures remain work. Original roadmap and goal remain active.
