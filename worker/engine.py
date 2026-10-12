@@ -339,11 +339,8 @@ class Engine:
                 doc.set_metadata(metadata)
             elif operation == 'ocr':
                 data = tessdata_dir()
-                language = str(args.get('language', 'eng'))
-                if language not in ('eng',):
-                    raise PDFError('This build includes English OCR only.')
-                if not (data / f'{language}.traineddata').is_file():
-                    raise PDFError('OCR language data is missing. Run the asset preparation script.')
+                from ocr import validate_language
+                language = validate_language(args.get('language','eng'),data)
                 dpi = int(args.get('dpi', 200))
                 if not 100 <= dpi <= 400:
                     raise PDFError('OCR resolution must be between 100 and 400 DPI.')
@@ -723,7 +720,8 @@ class Engine:
         if command == 'capabilities':
             from office import locate
             office=locate(self.root)
-            return {'engine':pdf.VersionBind,'app_data':str(self.root),'office_runtime':str(office) if office else None, 'ocr_languages':['eng'] if (tessdata_dir() / 'eng.traineddata').is_file() else [], 'tools':{name:shutil.which(name) for name in ['tesseract','ocrmypdf','qpdf','soffice','verapdf']}}
+            from ocr import LANGUAGES
+            return {'engine':pdf.VersionBind,'app_data':str(self.root),'office_runtime':str(office) if office else None, 'ocr_languages':[name for name in LANGUAGES if (tessdata_dir()/(name+'.traineddata')).is_file()], 'tools':{name:shutil.which(name) for name in ['tesseract','ocrmypdf','qpdf','soffice','verapdf']}}
         session = self.session(request['session'])
         if command == 'info':
             return self.info(session)

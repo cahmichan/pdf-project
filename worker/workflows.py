@@ -43,6 +43,9 @@ def validate(args):
         if any(key not in ('operation','pages','degrees','margin','text','size','color','start','opacity','title','author','subject','keywords','language','dpi','ocr_mode','margins','crop_mode','number_format','position','align','inset','edge') for key in step):
             raise ValueError('Preset contains unsupported settings.')
         if step.get('operation')=='ocr' and step.get('ocr_mode','missing') not in ('missing','skip_text'):raise ValueError('Unsupported OCR mode.')
+        if step.get('operation')=='ocr':
+            from ocr import validate_language
+            validate_language(step.get('language','eng'))
     if args.get('export','pdf') not in EXPORTS:raise ValueError('Unsupported preset export format.')
     return {'id':str(uuid.uuid4()),'name':name,'steps':steps,'export':args.get('export','pdf'),'builtin':False}
 

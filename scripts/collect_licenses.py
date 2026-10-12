@@ -34,3 +34,6 @@ ocr=root/'tools'/'tessdata'/'LICENSE'
 if ocr.exists():
     (folder/'tesseract-data').mkdir(exist_ok=True)
     shutil.copyfile(ocr,folder/'tesseract-data'/'LICENSE')
+
+ocr_models=root/"tools"/"tessdata"/"models.json"
+if ocr_models.exists():shutil.copyfile(ocr_models,folder/"tesseract-data"/"models.json")

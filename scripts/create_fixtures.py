@@ -71,3 +71,20 @@ mixed_page.insert_text((40,300),"Keep neighbor",fontsize=12);mixed.save(folder/"
 ocr_image_doc=pdf.open();ocr_image_page=ocr_image_doc.new_page(width=400,height=250);ocr_image_page.insert_text((35,75),"Scanned invoice 24680",fontsize=24);ocr_image_page.insert_text((35,145),"Mixed content recognition",fontsize=20)
 ocr_image=ocr_image_page.get_pixmap(dpi=200).tobytes("png");ocr_image_doc.close()
 ocr_mixed=pdf.open();ocr_mixed_page=ocr_mixed.new_page(width=500,height=700);ocr_mixed_page.insert_text((35,70),"Digital heading 13579",fontsize=20);ocr_mixed_page.insert_image(pdf.Rect(30,140,430,390),stream=ocr_image);ocr_mixed_page.insert_text((35,500),"Digital footer remains",fontsize=16);ocr_mixed.save(folder/"mixed-ocr.pdf");ocr_mixed.close()
+
+# Image-only language fixtures; no personal documents or installed fonts.
+for name,chinese in [('scan-malay.pdf',False),('scan-chinese.pdf',True)]:
+    with pdf.open() as language_doc:
+        language_page=language_doc.new_page(width=500,height=300)
+        if chinese:
+            language_page.insert_font(fontname='CJKSource',fontbuffer=pdf.Font('cjk').buffer)
+            language_page.insert_text((40,80),'文件扫描测试 86420',fontsize=30,fontname='CJKSource')
+            language_page.insert_text((40,160),'Reference document 86420',fontsize=24)
+        else:
+            language_page.insert_text((40,80),'Semakan dokumen 97531',fontsize=28)
+            language_page.insert_text((40,160),'Maklumat peribadi disimpan',fontsize=24)
+        language_image=language_page.get_pixmap(dpi=200).tobytes('png')
+    with pdf.open() as language_scan:
+        language_page=language_scan.new_page(width=500,height=300)
+        language_page.insert_image(language_page.rect,stream=language_image)
+        language_scan.save(folder/name)

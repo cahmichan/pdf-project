@@ -1,8 +1,8 @@
 # Personal Windows setup
 
-The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English OCR model. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
+The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English, Malay and Simplified Chinese OCR models. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.15.0/Folio_0.15.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
+Latest verified installer milestone: `artifacts/releases/0.16.0/Folio_0.16.0_x64-setup.exe`. This build includes multilingual offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
 
 ## Free Office runtime
 
@@ -83,3 +83,9 @@ Styled editing supports up to 5,000 characters per paragraph. Review ambiguous r
 In Convert, choose Make scanned PDF searchable. Add missing text on mixed pages preserves existing digital words and recognizes remaining raster content; pure digital pages are skipped. Skip pages with existing text retains the faster legacy behavior. Choose a page range and 100-400 DPI, then Apply. Review recognition, processed/skipped counts and added words before saving a separate copy. Batch presets offer the same OCR mode/resolution controls.
 
 The recognition image masks existing words; only an invisible text layer is added to the working PDF. Visible page pixels remain unchanged. Repeated recognition suppresses duplicates. Large page/DPI combinations exceeding 40 million pixels reject before rendering. OCR remains English-only. Touching/overlapping text, low-resolution images and recognition spelling need review. Changing invisible OCR text does not change visible scan words; scan reconstruction remains work. Version 0.15 passed packaged/browser/native OCR checks, including independent exact-pixel comparison after saved reopen.
+
+## Multilingual OCR (0.16)
+
+Convert and batch presets offer English, Malay, Simplified Chinese, English + Malay, English + Simplified Chinese, and all three languages. Select the languages actually present and review recognition before saving. All models run locally; document contents are not sent to a service. The installer bundles the models, so OCR does not require an account or a separate Tesseract installation. Model provenance is recorded in worker/ocr-models.json and packaged with the language-data license notices. More languages, handwriting, accuracy on poor scans, deskew and visible scan reconstruction remain work. Version 0.16 passed packaging and native checks; earlier releases remain preserved.
+
+Version 0.16.0 completed all packaging and native gates: 175 Python tests, 23 final browser workflows, frozen worker and six matching native receipts. Use artifacts/releases/0.16.0/Folio_0.16.0_x64-setup.exe. Language recognition and saved pixels were checked independently; browser/native screenshots reviewed. Review real scan recognition before saving. Hardware and installer-dialog acceptance still require your manual checks.

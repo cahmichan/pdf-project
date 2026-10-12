@@ -3,6 +3,17 @@ import io
 import math
 import pymupdf as pdf
 from PIL import Image,ImageDraw
+LANGUAGES={'eng':'English','msa':'Malay','chi_sim':'Simplified Chinese'}
+
+
+def validate_language(value,data=None):
+    from engine import PDFError
+    parts=str(value).split('+')
+    if not 1<=len(parts)<=3 or len(set(parts))!=len(parts) or any(part not in LANGUAGES for part in parts):
+        raise PDFError('Choose English, Malay, Simplified Chinese or a supported combination.')
+    if data is not None and any(not (data/(part+'.traineddata')).is_file() for part in parts):
+        raise PDFError('Selected OCR language data is missing. Run asset preparation or reinstall the verified build.')
+    return '+'.join(parts)
 
 
 def add_missing_text(page,language,data,dpi,mode='missing'):

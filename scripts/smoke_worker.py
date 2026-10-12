@@ -61,13 +61,21 @@ try:
     assert mixed_scan['ocr_report']['words_added']==0
     with pdf.open(mixed_scan['path']) as checked:assert checked[0].get_text().count('24680')==1 and checked[0].get_text().count('13579')==1
     capabilities=command({'command':'capabilities'})
-    assert capabilities['ocr_languages']==['eng']
+    assert capabilities['ocr_languages']==['eng','msa','chi_sim']
+    for language,fixture,expected in [('msa','scan-malay.pdf','97531'),('chi_sim','scan-chinese.pdf','文件'),('eng+msa+chi_sim','scan-chinese.pdf','测试')]:
+        multilingual=command({'command':'open','args':{'path':str(root/'artifacts'/'fixtures'/fixture)}})
+        multilingual=command({'command':'apply','session':multilingual['id'],'revision':multilingual['revision'],'args':{'operation':'ocr','language':language}})
+        saved=command({'command':'export','session':multilingual['id'],'args':{'path':str(output/(language+'.pdf')),'overwrite':True}})
+        import pypdfium2 as pdfium
+        with pdfium.PdfDocument(saved['path']) as checked:
+            assert expected in checked[0].get_textpage().get_text_range().replace(' ','')
     scan=command({'command':'open','args':{'path':str(root/'artifacts'/'fixtures'/'scan.pdf')}})
     scan=command({'command':'apply','session':scan['id'],'revision':scan['revision'],'args':{'operation':'ocr'}})
     with pdf.open(scan['path']) as recognized:
         assert '67890' in recognized[0].get_text()
     with binary.open('rb') as stream:binary_hash=hashlib.file_digest(stream,'sha256').hexdigest()
     receipt={'passed':True,'binary':str(binary),'binary_sha256':binary_hash,'engine':capabilities['engine'],'output':exported['path'],'word':word['path'],'developer_python_required':False,'bundled_offline_ocr':True}
+    receipt['offline_ocr_languages']=capabilities['ocr_languages']
     if office_runtime:
         converted=command({'command':'import_office','args':{'path':str(root/'artifacts'/'fixtures'/'office.docx')}})
         with pdf.open(converted['path']) as checked:
