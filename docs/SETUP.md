@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English OCR model. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.13.0/Folio_0.13.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
+Latest verified installer milestone: `artifacts/releases/0.14.0/Folio_0.14.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
 
 ## Free Office runtime
 
@@ -70,8 +70,10 @@ Photo limits: 40 million input pixels, corrected output up to 4000 pixels per ed
 
 Choose Edit, then click existing text. Type directly on the page; select words within the editor with the mouse or standard keyboard shortcuts. The floating toolbar chooses font, size and color. Apply text or Ctrl+Enter commits one undoable working revision; Escape/Cancel text discards the draft. Add new text starts with a click at the desired position, then typing. No rectangle drawing or sidebar text box is required for these tools. Save a copy also applies staged text. Drafts survive page navigation in memory; return to the indicated page to continue. Apply/save before closing the app.
 
-Original embedded fonts are reused when glyph coverage permits. Uniform horizontal paragraphs (including rotated pages) are supported; mixed styles require an explicit replacement font. Text wraps into available free space, and placement rejects collisions or overflow. Automatic movement of surrounding paragraphs, angled baselines, complex shaping and scan text reconstruction remain work. Version 0.13 passed packaged and native direct edit/insert/undo checks. Selecting text without changing it does not create a new revision.
+Original embedded fonts are reused when glyph coverage permits. Horizontal paragraphs (including rotated pages) are supported. Version 0.14 Original paragraph styles retains mixed fonts, colors and relative sizes after applying. New characters inherit the replaced/adjacent run style. Changing size scales the paragraph styles; an explicit color changes all runs. Choosing another font uses one replacement style. Text wraps into available free space, and placement rejects collisions or overflow. Automatic movement of surrounding paragraphs, angled baselines, complex shaping and scan text reconstruction remain work. Version 0.14 passed packaged/native direct and mixed-style edit/save/undo checks. Selecting text without changing it does not create a new revision.
 
 ## Camera capture (0.13)
 
 In Scan photos, choose Use camera, then Start camera. Grant the system prompt when requested. Capture photo can add multiple pages. Stop camera releases the video stream; Done returns to corner review/enhancement. Switching cameras requires stopping first. Audio is never requested. Camera frames are kept as private local photos under the Folio app-data scan-captures folder; deletion/retention controls remain work. Synthetic-camera tests cover capture, denied permission and closing while permission is pending. Synthetic camera capture/create/export/reopen and track release also passed in the bundled WebView2. Real camera permission/capture remains a manual acceptance check.
+
+Styled editing supports up to 5,000 characters per paragraph. Review ambiguous replacements and missing source glyphs. The typing control shows the first style; review the formatted result after Apply. Opacity/decorations, advanced shaping, live rich formatting and surrounding-layout movement need further compatibility work.

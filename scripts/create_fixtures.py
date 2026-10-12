@@ -60,3 +60,9 @@ Image.fromarray(cv2.warpPerspective(photo_page,photo_transform,(800,950),borderV
 # Synthetic video input; native tests never activate a real camera.
 camera_frame=cv2.cvtColor(cv2.imread(str(folder/"scan-photo.png")),cv2.COLOR_BGR2YUV_I420).tobytes()
 (folder/"camera.y4m").write_bytes(b"YUV4MPEG2 W800 H950 F30:1 Ip A1:1 C420jpeg\n"+b"FRAME\n"+camera_frame)
+
+# Mixed font/size/color paragraph for direct styled editing.
+mixed=pdf.open();mixed_page=mixed.new_page(width=500,height=700);mixed_x=40
+for mixed_text,mixed_font,mixed_size,mixed_color in [("Total: ","helv",14,(0,0,0)),("$100","hebo",18,(.8,0,0)),(" paid","tiit",14,(0,.3,0))]:
+ mixed_page.insert_text((mixed_x,80),mixed_text,fontname=mixed_font,fontsize=mixed_size,color=mixed_color);mixed_x+=pdf.get_text_length(mixed_text,fontname=mixed_font,fontsize=mixed_size)
+mixed_page.insert_text((40,300),"Keep neighbor",fontsize=12);mixed.save(folder/"mixed-styles.pdf");mixed.close()

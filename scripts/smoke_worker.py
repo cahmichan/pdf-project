@@ -48,6 +48,12 @@ try:
     direct_output=command({'command':'export','session':direct['id'],'args':{'path':str(output/'direct-text.pdf'),'overwrite':True}})
     with pdf.open(direct_output['path']) as checked:
         assert 'Packaged direct heading' in checked[0].get_text() and 'Packaged click and type' in checked[0].get_text() and 'Folio sample document - page 1' not in checked[0].get_text()
+    styled=command({'command':'open','args':{'path':str(root/'artifacts'/'fixtures'/'mixed-styles.pdf')}})
+    block=command({'command':'inspect_page','session':styled['id'],'args':{'page':1}})['text_blocks'][0]
+    styled=command({'command':'apply','session':styled['id'],'revision':styled['revision'],'args':{'operation':'edit_text','expected':block['text'],'source_rect':block['raw_rect'],'text':'Total: $125 paid','font':'original'}})
+    with pdf.open(styled['path']) as checked:
+        spans=[span for item in checked[0].get_text('dict')['blocks'] if item['type']==0 for line in item['lines'] for span in line['spans']]
+        amount=next(span for span in spans if '$125' in span['text']);assert amount['font']=='Helvetica-Bold' and abs(amount['size']-18)<.1 and amount['color']&0xff0000
     capabilities=command({'command':'capabilities'})
     assert capabilities['ocr_languages']==['eng']
     scan=command({'command':'open','args':{'path':str(root/'artifacts'/'fixtures'/'scan.pdf')}})
@@ -99,6 +105,7 @@ try:
     assert captured['detected'] and Path(captured['path']).is_file()
     receipt['camera_frame_import']=True
     receipt['direct_text_edit_insert_reopen']=True
+    receipt['original_mixed_styles_preserved']=True
     processed=command({'command':'scan_preview','args':{**photo,'filter':'black_white'}})
     assert processed['preview'].startswith('data:image/jpeg;base64,')
     photo_document=command({'command':'scan_create','args':{'pages':[{**photo,'filter':'document'},{**photo,'filter':'black_white','rotation':90}]}})

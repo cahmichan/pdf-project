@@ -42,3 +42,16 @@ test('direct existing-text controls work on cropped pages at every page rotation
     await page.screenshot({path:`artifacts/ui/direct-text-${rotation}.png`,fullPage:true});
   }
 });
+
+test('editing one word retains the original paragraph font runs and colors in saved PDF',async({page})=>{
+  const source=path.join(root,'artifacts','fixtures','mixed-styles.pdf'),output=path.join(root,'artifacts','fixtures','ui-mixed-styles.pdf');
+  execFileSync(python,['-c',"import pymupdf as p,sys; d=p.open(); q=d.new_page(width=500,height=700); x=40;\nfor t,f,s,c in [('Total: ','helv',14,(0,0,0)),('$100','hebo',18,(.8,0,0)),(' paid','tiit',14,(0,.3,0))]:\n q.insert_text((x,80),t,fontname=f,fontsize=s,color=c); x+=p.get_text_length(t,fontname=f,fontsize=s)\nq.insert_text((40,300),'Keep neighbor',fontsize=12); d.save(sys.argv[1])",source],{cwd:root});
+  const original=fs.readFileSync(source);
+  await page.goto('/');await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(source);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('.textLayer')).toContainText('Total:',{timeout:15000});
+  await page.getByRole('button',{name:'Edit',exact:true}).click();await page.locator('.textLayer span').filter({hasText:'$100'}).click();
+  await expect(page.getByLabel('Edit text on page')).toHaveValue('Total: $100 paid');await expect(page.getByLabel('Text font')).toHaveValue('original');
+  await page.getByLabel('Edit text on page').fill('Total: $125 paid');await page.getByRole('button',{name:'Apply text',exact:true}).click();await expect(page.locator('.textLayer')).toContainText('$125');await page.screenshot({path:'artifacts/ui/mixed-styles.png',fullPage:true});
+  await page.getByRole('button',{name:'Save a copy',exact:true}).click();await page.getByLabel('Absolute output path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('.status-bar')).toContainText('Saved');
+  execFileSync(python,['-c',"import pymupdf as p,sys; d=p.open(sys.argv[1]); spans=[s for b in d[0].get_text('dict')['blocks'] if b['type']==0 for l in b['lines'] for s in l['spans']]; amount=next(s for s in spans if '$125' in s['text']); assert amount['font']=='Helvetica-Bold' and abs(amount['size']-18)<.1 and amount['color']&0xff0000; paid=next(s for s in spans if 'paid' in s['text']); assert paid['font']=='Times-Italic' and paid['color']&0x00ff00; assert 'Keep neighbor' in d[0].get_text(); d.close()",output],{cwd:root});
+  expect(fs.readFileSync(source).equals(original)).toBeTruthy();await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(page.locator('.textLayer')).toContainText('$100');
+});

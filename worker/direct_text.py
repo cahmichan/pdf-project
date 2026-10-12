@@ -60,7 +60,11 @@ def edit(doc,page,args):
     if len(text)>20000:raise PDFError('Edit at most 20,000 characters in one paragraph.')
     size=float(args.get('size',original['size'] if original else 12))
     if not math.isfinite(size) or not 1<=size<=300:raise PDFError('Choose a font size from 1 to 300 points.')
-    font,fontname,buffer=font_choice(doc,page,{**args,'font':'helv'} if not text else args,original,text)
+    styled=None
+    if original and original['mixed_styles'] and text and args.get('font','original')=='original':
+        from styled_text import StyledText
+        styled=StyledText(doc,page,original,text,args)
+    font,fontname,buffer=font_choice(doc,page,{**args,'font':'helv'} if not text else args,{**original,'mixed_styles':False} if styled else original,text if not styled else '')
     bounds=page.rect*page.derotation_matrix
     if adding:
         point=args.get('point',[])
@@ -72,6 +76,7 @@ def edit(doc,page,args):
         rotation=page.rotation
     else:
         origin=original['origin'];region=pdf.Rect(original['raw_rect'][0],origin[1]-font.ascender*size,bounds.x1-2,bounds.y1-2)
+        if styled:region.y0=styled.top
         obstacles=[pdf.Rect(item['raw_rect']) for item in items if item['id']!=original['id']]
         rotation=0
         old=pdf.Rect(original['raw_rect'])
@@ -85,6 +90,7 @@ def edit(doc,page,args):
     if raw.is_empty or not bounds.contains(raw):raise PDFError('There is no room for text here. Choose another position or reduce the font size.')
     color=rgb(args.get('color',original['color'] if original else '#253653'))
     def place(target):
+        if styled:return styled.place(target,raw)
         if buffer:target.insert_font(fontname=fontname,fontbuffer=buffer)
         return target.insert_textbox(raw,text,fontname=fontname,fontsize=size,color=color,rotate=rotation,lineheight=1.2)
     with pdf.open() as scratch:
