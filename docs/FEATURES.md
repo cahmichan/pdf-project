@@ -18,8 +18,8 @@ This is a live implementation tracker, not a parity claim. Evidence is recorded 
 | Office import | Free LibreOffice DOCX/XLSX/PPTX import tested; ODF/RTF/TXT supported by adapter | Broader layout fixtures; configured runtime must remain available |
 | Compare/archival | Positional text/pixel comparison with standalone HTML report; static PDF/A-2b export and independent veraPDF validation/XML report | Alignment of inserted/reordered pages; other archival conformance levels, broader layout/color fixtures |
 | Markdown | Plain reading-order text export | Structural heading/table/list preservation |
-| Workflows/scanner | Saved presets, batch jobs, per-file recovery receipts, failure continuation; 0.13 photo scanning with boundary detection/review, perspective crop, enhancement, rotation, ordered multi-page PDF and explicit camera capture (synthetic browser/native verification passed) | Real camera permission/capture, native photo picker/installed UI acceptance, broader lighting/clutter fixtures, physical scanner integration and curved-page dewarping |
+| Workflows/scanner | Saved presets, batch jobs, per-file recovery receipts, failure continuation; 0.13 photo scanning with boundary detection/review, perspective crop, enhancement, rotation, ordered multi-page PDF and explicit camera capture. Verified 0.17 adds reviewable text-tilt suggestions and manual fine-angle straightening with retained edge content | Real camera permission/capture, native photo picker/installed UI acceptance, broader lighting/clutter fixtures, physical scanner integration and curved-page dewarping |
 | Intelligence | Not implemented yet | Free local models, hardware/license evaluation, quality gates |
-| Installer | 0.15.0 installer, bundled OCR, Office adapter and native WebView2/edit/link/preview/cancel/batch smoke passed | Installed UI, actual print/scanner acceptance |
+| Installer | 0.17.0 installer, bundled multilingual OCR, Office adapter and native WebView2/edit/link/preview/cancel/batch smoke passed | Installed UI, actual print/scanner acceptance |
 
 No personal files have been used for automated tests. Synthetic fixtures only.

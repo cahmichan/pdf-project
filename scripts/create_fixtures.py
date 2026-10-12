@@ -88,3 +88,9 @@ for name,chinese in [('scan-malay.pdf',False),('scan-chinese.pdf',True)]:
         language_page=language_scan.new_page(width=500,height=300)
         language_page.insert_image(language_page.rect,stream=language_image)
         language_scan.save(folder/name)
+
+# Slightly tilted text photo for reviewable scan straightening.
+tilted=np.full((600,800,3),255,np.uint8)
+for tilted_y in range(100,520,70):
+    cv2.putText(tilted,'Local scan reference 57391',(80,tilted_y),cv2.FONT_HERSHEY_SIMPLEX,.9,(20,20,20),2)
+Image.fromarray(cv2.warpAffine(tilted,cv2.getRotationMatrix2D((400,300),7,1),(800,600),borderValue=(255,255,255))).save(folder/'scan-tilted.png')

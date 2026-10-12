@@ -128,6 +128,16 @@ try:
     photo_reopen=command({'command':'open','args':{'path':photo_output['path']}})
     assert photo_reopen['page_count']==2
     receipt['photo_scan_perspective_enhance_reopen']=True
+    tilted_photo=command({'command':'scan_prepare','args':{'path':str(root/'artifacts'/'fixtures'/'scan-tilted.png')}})
+    tilted_photo.update(corners=[[0,0],[1,0],[1,1],[0,1]],filter='color')
+    angle=command({'command':'scan_straighten','args':tilted_photo})
+    assert angle['detected'] and abs(angle['angle']+7)<.6
+    straightened=command({'command':'scan_create','args':{'pages':[{**tilted_photo,'straighten':angle['angle']}]}})
+    straightened_saved=command({'command':'export','session':straightened['id'],'args':{'path':str(output/'straightened.pdf'),'overwrite':True}})
+    with pdfium.PdfDocument(straightened_saved['path']) as checked:
+        assert checked[0].get_width()>800*72/150 and checked[0].get_height()>600*72/150
+        assert checked[0].render().to_pil().convert('L').getextrema()[0]<80
+    receipt['scan_straightening_suggestion_create_reopen']=True
     import uuid
     identity=output/f'synthetic-{uuid.uuid4().hex}.pfx'
     command({'command':'create_identity','args':{'path':str(identity),'name':'Packaged synthetic identity','password':'Synthetic-smoke-only-123'}})

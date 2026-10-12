@@ -37,6 +37,12 @@ try{
   await page.getByRole('status').filter({hasText:'2 photos added.'}).waitFor();
   await page.screenshot({path:path.join(folder,'camera-capture.png')});
   await page.getByRole('button',{name:'Done',exact:true}).click();
+  await page.getByLabel('Scan straightening angle').fill('3');
+  await page.getByRole('button',{name:'Preview scan',exact:true}).click();
+  await page.getByAltText('Corrected scan preview').waitFor();
+  await page.screenshot({path:path.join(folder,'scan-straightening-controls.png')});
+  await page.getByRole('button',{name:'Reset straightening',exact:true}).click();
+  if(await page.getByLabel('Scan straightening angle').inputValue()!=='0')throw new Error('Native scan straightening reset failed.');
   if(!await page.evaluate(()=>window.cameraTestTracks.every(track=>track.readyState==='ended')))throw new Error('Native camera tracks remained live after closing.');
   await page.getByRole('button',{name:'Create scanned PDF',exact:true}).click();
   await page.getByRole('dialog',{name:'Scan photos to PDF'}).waitFor({state:'hidden'});

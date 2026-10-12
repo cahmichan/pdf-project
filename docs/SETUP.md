@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English, Malay and Simplified Chinese OCR models. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.16.0/Folio_0.16.0_x64-setup.exe`. This build includes multilingual offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
+Latest verified installer milestone: `artifacts/releases/0.17.0/Folio_0.17.0_x64-setup.exe`. This build includes multilingual offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
 
 ## Free Office runtime
 
@@ -89,3 +89,11 @@ The recognition image masks existing words; only an invisible text layer is adde
 Convert and batch presets offer English, Malay, Simplified Chinese, English + Malay, English + Simplified Chinese, and all three languages. Select the languages actually present and review recognition before saving. All models run locally; document contents are not sent to a service. The installer bundles the models, so OCR does not require an account or a separate Tesseract installation. Model provenance is recorded in worker/ocr-models.json and packaged with the language-data license notices. More languages, handwriting, accuracy on poor scans, deskew and visible scan reconstruction remain work. Version 0.16 passed packaging and native checks; earlier releases remain preserved.
 
 Version 0.16.0 completed all packaging and native gates: 175 Python tests, 23 final browser workflows, frozen worker and six matching native receipts. Use artifacts/releases/0.16.0/Folio_0.16.0_x64-setup.exe. Language recognition and saved pixels were checked independently; browser/native screenshots reviewed. Review real scan recognition before saving. Hardware and installer-dialog acceptance still require your manual checks.
+
+## Scan straightening (0.17)
+
+After reviewing document corners, choose Suggest straightening to propose a small text-baseline correction and preview it. You can enter an angle from -15 to 15 degrees, Reset straightening, then Preview scan again. The setting belongs to the selected scan page. Fine rotation adds white margins to retain edge content, then applies enhancement and the selected quarter-turn rotation. Review text and diagrams before Create scanned PDF; photos remain unchanged.
+
+Angle detection examines local dark-pixel alignment, not document semantics. Blank or low-confidence pages keep zero; columns, diagrams, borders, uneven backgrounds and curved text may require manual adjustment. This straightens imported/captured photo output, not an existing PDF's invisible OCR layer. Version 0.17 passed full packaged/native checks; earlier releases remain preserved.
+
+Version 0.17.0 passed 187 Python tests, 24 browser workflows, frozen-worker checks and all six native suites. The scanner angle preview/reset was exercised in WebView2 with synthetic camera input; corrected scanner output was saved and independently reopened. Review angle suggestions before creating the PDF, especially for diagrams/columns/curved text. Physical printer/scanner/real camera and native picker/installer dialogs still need manual acceptance.

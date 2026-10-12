@@ -190,8 +190,21 @@ try {
     return invoke({command:'open',args:{path:exported.path}});
   },{image:'data:image/png;base64,'+fs.readFileSync(path.join(root,'artifacts','fixtures','scan-photo.png')).toString('base64'),output:path.join(receiptPath,'photo-scanned.pdf')});
   if(photoScan.page_count!==2||photoScan.pages[0].width>=photoScan.pages[0].height||photoScan.pages[1].width<=photoScan.pages[1].height)throw new Error('Native scanned page ordering/rotation mismatch.');
+  const tiltedSource=path.join(root,'artifacts','fixtures','scan-tilted.png'),tiltedOriginal=fs.readFileSync(tiltedSource),straightenedOutput=path.join(receiptPath,'straightened.pdf');
+  await page.evaluate(async input=>{
+    const invoke=request=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request});
+    const photo=await invoke({command:'scan_prepare',args:{path:input.source}});
+    const args={...photo,corners:[[0,0],[1,0],[1,1],[0,1]],filter:'color'};
+    const proposal=await invoke({command:'scan_straighten',args});
+    if(!proposal.detected||Math.abs(proposal.angle+7)>=.6||!proposal.preview.startsWith('data:image/jpeg;base64,'))throw new Error('Native scan straightening proposal failed.');
+    const scanned=await invoke({command:'scan_create',args:{pages:[{...args,straighten:proposal.angle}]}});
+    await invoke({command:'export',session:scanned.id,args:{path:input.output,overwrite:true}});
+  },{source:tiltedSource,output:straightenedOutput});
+  execFileSync(path.join(root,'.venv','Scripts','python.exe'),['-c',"import pypdfium2 as p,sys; d=p.PdfDocument(sys.argv[1]); q=d[0]; assert q.get_width()>800*72/150 and q.get_height()>600*72/150; assert q.render().to_pil().convert('L').getextrema()[0]<80; d.close()",straightenedOutput],{cwd:root,windowsHide:true});
+  if(!fs.readFileSync(tiltedSource).equals(tiltedOriginal))throw new Error('Native straightening changed the source photo.');
   const digest=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
   const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,configured_free_archival_conversion:true,visual_page_organizer:true,split_pdf_reopen:true,precise_crop_and_custom_numbering:true,on_page_form_fill_and_undo:true,radio_create_fill_and_undo:true,photo_scan_perspective_enhance_reopen:true,camera_frame_import:true,direct_text_edit_insert_and_undo:true,private_assets_load_and_original_asset_blocked:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
+  result.scan_straightening_suggestion_create_reopen=true;
   if(errors.length)throw new Error(JSON.stringify(errors));
   fs.writeFileSync(path.join(receiptPath,'receipt.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 } catch(error) {

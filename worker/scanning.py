@@ -33,6 +33,49 @@ def thumbnail(image):
     return 'data:image/jpeg;base64,' + base64.b64encode(buffer.getvalue()).decode('ascii')
 
 
+def straighten(image, angle):
+    """Rotate into an expanded white canvas so edge content is retained."""
+    from engine import PDFError
+    try:angle=float(angle)
+    except (ValueError,TypeError):raise PDFError('Choose a straightening angle between -15 and 15 degrees.')
+    if not math.isfinite(angle) or abs(angle)>15:
+        raise PDFError('Choose a straightening angle between -15 and 15 degrees.')
+    if angle==0:return image
+    height,width=image.shape[:2]
+    matrix=cv2.getRotationMatrix2D((width/2,height/2),angle,1)
+    cosine,sine=abs(matrix[0,0]),abs(matrix[0,1])
+    expanded_width=math.ceil(width*cosine+height*sine)
+    expanded_height=math.ceil(height*cosine+width*sine)
+    scale=min(1,4000/max(expanded_width,expanded_height),math.sqrt(16_000_000/(expanded_width*expanded_height)))
+    matrix[:,:2]*=scale
+    matrix[:,2]=[expanded_width*scale/2,expanded_height*scale/2]-matrix[:,:2]@np.array([width/2,height/2])
+    return cv2.warpAffine(image,matrix,(math.ceil(expanded_width*scale),math.ceil(expanded_height*scale)),flags=cv2.INTER_CUBIC,borderValue=255 if image.ndim==2 else (255,255,255))
+
+
+def suggest_angle(image):
+    """Propose baseline alignment; low-confidence pages keep zero rotation."""
+    height,width=image.shape[:2];scale=min(1,800/max(height,width))
+    small=cv2.resize(image,(max(32,round(width*scale)),max(32,round(height*scale))))
+    gray=cv2.cvtColor(small,cv2.COLOR_RGB2GRAY) if small.ndim==3 else small
+    threshold=min(200,cv2.threshold(gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)[0])
+    ink=(gray<=threshold).astype(np.uint8)
+    # Page borders are not evidence of text orientation.
+    margin=max(1,round(min(ink.shape)*.04));ink[:margin]=0;ink[-margin:]=0;ink[:,:margin]=0;ink[:,-margin:]=0
+    if ink.sum()<100:return {'angle':0,'confidence':0,'detected':False}
+    center=(ink.shape[1]/2,ink.shape[0]/2)
+    def score(angle):
+        aligned=cv2.warpAffine(ink,cv2.getRotationMatrix2D(center,angle,1),(ink.shape[1],ink.shape[0]),flags=cv2.INTER_NEAREST)
+        rows=aligned.sum(axis=1).astype(float)
+        return float((rows@rows)/max(1,rows.sum()**2))
+    angles=np.arange(-15,15.01,.5);scores=[score(angle) for angle in angles]
+    best=float(angles[int(np.argmax(scores))])
+    fine=np.arange(max(-15,best-.5),min(15,best+.5)+.01,.1)
+    best=float(fine[int(np.argmax([score(angle) for angle in fine]))])
+    confidence=score(best)/max(score(0),1e-12)
+    detected=abs(best)>=.25 and abs(best)<14.9 and confidence>=1.08
+    return {'angle':round(best,1) if detected else 0,'confidence':round(confidence,3),'detected':bool(detected)}
+
+
 def detect(image):
     height, width = image.shape[:2]
     scale = min(1, 1200 / max(height, width))
@@ -119,6 +162,8 @@ def process(args):
     out_width, out_height = max(2, round(out_width * scale)), max(2, round(out_height * scale))
     target = np.float32([[0, 0], [out_width - 1, 0], [out_width - 1, out_height - 1], [0, out_height - 1]])
     result = cv2.warpPerspective(image, cv2.getPerspectiveTransform(points, target), (out_width, out_height), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    result=straighten(result,args.get('straighten',0))
+    out_height,out_width=result.shape[:2]
     mode = args.get('filter', 'color')
     if mode != 'color':
         gray = cv2.cvtColor(result, cv2.COLOR_RGB2GRAY)
@@ -141,6 +186,11 @@ def process(args):
 def preview(args):
     image = process(args)
     return {'preview': thumbnail(image), 'width': image.shape[1], 'height': image.shape[0]}
+
+
+def suggest(args):
+    proposal=suggest_angle(process({**args,'straighten':0,'rotation':0}))
+    return {**proposal,**preview({**args,'straighten':proposal['angle']})}
 
 
 def create(engine, args):

@@ -672,8 +672,9 @@ class Engine:
         command = request['command']; args = request.get('args', {})
         if command == 'startup':
             return None
-        if command in ('scan_prepare', 'scan_preview', 'scan_create', 'scan_capture'):
-            from scanning import prepare, preview, create, capture
+        if command in ('scan_prepare', 'scan_preview', 'scan_create', 'scan_capture', 'scan_straighten'):
+            from scanning import prepare, preview, create, capture, suggest
+            if command == 'scan_straighten':return suggest(args)
             if command == 'scan_capture':return capture(self,args)
             if command == 'scan_prepare':return prepare(args)
             if command == 'scan_preview':return preview(args)
