@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 const root=process.cwd();
 const fixture=path.join(root,'artifacts','fixtures','sample.pdf');
 
@@ -373,4 +374,21 @@ test('form drafts survive page and tab changes and save without a separate Apply
   const output=path.join(root,'artifacts','fixtures','ui-form-drafts.pdf');await page.getByRole('button',{name:'Save a copy',exact:true}).click();await page.getByLabel('Absolute output path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('.status-bar')).toContainText(output);
   await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(output);await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Forms',exact:true}).click();await expect(page.getByLabel('On-page Name 0',{exact:true})).toHaveValue('Draft0');await page.locator('.page-item').nth(1).click();await expect(page.getByLabel('On-page Name 90',{exact:true})).toHaveValue('Draft90');
   await page.locator('.tabs').getByRole('button',{name:'sample.pdf',exact:true}).click();await expect(page.getByLabel('On-page Full name',{exact:true})).toHaveValue('Other draft');
+});
+
+test('unusual field names and staged values survive split, image and comparison outputs',async({page})=>{
+  const source=path.join(root,'artifacts','fixtures','unusual-fields.pdf');const original=fs.readFileSync(source);
+  const folder=fs.mkdtempSync(path.join(root,'artifacts','form-output-'));const python=path.join(root,'.venv','Scripts','python.exe');
+  const fields=(file:string)=>JSON.parse(execFileSync(python,['-c','import pymupdf as p,json,sys;d=p.open(sys.argv[1]);print(json.dumps({w.field_name:w.field_value for w in d[0].widgets()}));d.close()',file],{encoding:'utf8'}));
+  const saveCopy=async(file:string)=>{await page.getByRole('button',{name:'Save a copy',exact:true}).click();await page.getByLabel('Absolute output path').fill(file);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('.status-bar')).toContainText(file);};
+  await page.goto('/');await page.getByRole('button',{name:'Open PDF',exact:true}).click();await page.getByLabel('Absolute local file path').fill(source);await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Forms',exact:true}).click();
+  await page.getByLabel('On-page __proto__',{exact:true}).fill('Proto draft');await page.getByLabel('On-page constructor',{exact:true}).fill('Ctor draft');await page.getByLabel('On-page toString',{exact:true}).fill('String draft');
+  await page.locator('.mode-bar').getByRole('button',{name:'Pages',exact:true}).click();await page.getByLabel('Tool',{exact:true}).selectOption('split');await page.getByRole('button',{name:'Choose split method'}).click();
+  let dialog=page.getByRole('dialog',{name:'Split PDF',exact:true});await dialog.getByRole('button',{name:'Choose split output folder'}).click();await page.getByLabel('Absolute split output folder').fill(folder);await page.getByRole('button',{name:'Continue',exact:true}).click();await dialog.getByRole('button',{name:'Save split PDFs'}).click();await expect(dialog.getByRole('heading',{name:'1 of 1 files saved'})).toBeVisible();
+  const part=(await dialog.locator('.split-results article .batch-path').textContent())!;const splitFields=fields(part);expect(splitFields['__proto__']).toBe('Proto draft');expect(splitFields['constructor']).toBe('Ctor draft');expect(splitFields['toString']).toBe('String draft');await dialog.getByRole('button',{name:'Close',exact:true}).click();
+  await page.getByRole('button',{name:'Forms',exact:true}).click();await page.getByLabel('On-page constructor',{exact:true}).fill('Image draft');await page.getByRole('button',{name:'Convert',exact:true}).click();await page.getByLabel('Tool',{exact:true}).selectOption('images');await page.getByRole('button',{name:'Export a copy'}).click();await page.getByLabel('Output folder',{exact:true}).fill(folder);await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('.status-bar')).toContainText('Exported 1 images');
+  const image=path.join(folder,fs.readdirSync(folder).find(file=>file.endsWith('.png'))!);
+  const recognized=execFileSync(python,['-c','import pymupdf as p,sys;data=p.Pixmap(sys.argv[1]).pdfocr_tobytes(language="eng",tessdata=sys.argv[2]);d=p.open(stream=data,filetype="pdf");print(d[0].get_text());d.close()',image,path.join(root,'tools','tessdata')],{encoding:'utf8'});expect(recognized).toContain('Image draft');
+  const before=path.join(folder,'before-comparison.pdf');await saveCopy(before);await page.getByRole('button',{name:'Forms',exact:true}).click();await page.getByLabel('On-page toString',{exact:true}).fill('Compare draft');await page.getByRole('button',{name:'Convert',exact:true}).click();await page.getByLabel('Tool',{exact:true}).selectOption('compare');await page.getByRole('button',{name:'Choose second PDF'}).click();await page.getByLabel('Absolute local file path').fill(before);await page.getByRole('button',{name:'Continue',exact:true}).click();dialog=page.getByRole('dialog',{name:'PDF comparison',exact:true});await expect(dialog.getByRole('heading',{name:'1 changed pages',exact:true})).toBeVisible();await dialog.getByRole('button',{name:'Close',exact:true}).click();
+  const final=path.join(folder,'after-comparison.pdf');await saveCopy(final);expect(fields(final)['toString']).toBe('Compare draft');expect(fs.readFileSync(source).equals(original)).toBeTruthy();
 });

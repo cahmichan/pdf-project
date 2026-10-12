@@ -9,7 +9,7 @@ This is a live implementation tracker, not a parity claim. Evidence is recorded 
 | Page tools | Merge, ranges/extract, reorder/duplicate, delete, rotate, crop, blank page, numbers, text watermark; independent duplicates, visual drag organizer/split groups, precise visual crop/reset/selection and customizable numbers/watermarks verified in 0.9 | Image/diagonal watermarks, broader complex form/bookmark preservation cases |
 | Images | Images to PDF, insert image/signature graphic, PNG/JPG page export, embedded image extraction and replace/remove | JPG quality controls, image masks and shared-image compatibility cases |
 | Annotation | Quad text highlights, underline/strikeout, rectangles, sticky notes, freehand ink, standard stamps, comment edit/delete | Broader rotated text markup fixtures |
-| Forms | Fill fields, create text/checkbox/dropdown/list fields, flatten widgets; rotated on-page controls and form drafts verified in 0.10 | Staged values for split/image/comparison pipelines, unusual field names, radio groups, detection, multi-select/export-label choices, complex field compatibility |
+| Forms | Fill fields, create text/checkbox/dropdown/list fields, flatten widgets; rotated on-page controls and form drafts verified in 0.10.1; staged split/image/comparison output and unusual name keys covered | Radio groups, detection, multi-select/export-label choices, complex field compatibility |
 | Existing text | Latin rectangle replacement with overflow checks, visual rotation mapping; image overlaps rejected | Original fonts, block reflow, extended scripts, scan reconstruction |
 | Security | AES-256 export, password open/decrypt, rectangular redaction plus auxiliary scrub, incremental certificate signing, personal encrypted identities, public certificate export and offline signature inspection | Broader redaction fixtures, permissions controls, visible certificate appearance, trusted timestamps/revocation assurance |
 | Compression/repair | Lossless rewrite, screen/print lossy image presets, readable-PDF recovery | Quality preview, qpdf diagnostics |
@@ -20,6 +20,6 @@ This is a live implementation tracker, not a parity claim. Evidence is recorded 
 | Markdown | Plain reading-order text export | Structural heading/table/list preservation |
 | Workflows/scanner | Saved presets, batch jobs, per-file recovery receipts, failure continuation | Scanner integration |
 | Intelligence | Not implemented yet | Free local models, hardware/license evaluation, quality gates |
-| Installer | 0.10.0 installer, bundled OCR, Office adapter and native WebView2/edit/link/preview/cancel/batch smoke passed | Installed UI, actual print/scanner acceptance |
+| Installer | 0.10.1 installer, bundled OCR, Office adapter and native WebView2/edit/link/preview/cancel/batch smoke passed | Installed UI, actual print/scanner acceptance |
 
 No personal files have been used for automated tests. Synthetic fixtures only.

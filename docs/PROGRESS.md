@@ -184,3 +184,19 @@ Next: on-page form interaction, radio groups/detection and remaining text/font/O
 - Drafts remain in memory until applied or saved; browser/app shutdown recovery of unapplied values is not implemented. Advanced radio/multi-select/export-label choices, scripted calculations, richer fonts and unusual forms remain compatibility work. Native dialogs, installed UI, physical printer/scanner and high-DPI acceptance remain manual gates.
 
 Next: exercise unusual field-name keys and ensure split/image/comparison exports include staged form values, then radio groups/detection and the remaining original text/OCR/conversion/scanner/local-model roadmap. Full goal remains active.
+
+## 0.10.1 form-output candidate (12 October 2026)
+
+- Draft name/ID maps now have null prototypes, and membership checks use own properties. Fields named __proto__, constructor and toString can be staged and saved normally; history clearing keeps the same representation.
+- Split, image export and comparison now apply pending form values before processing the current document. Existing save/print/sign/working-edit handling remains in place.
+- New browser test passed unusual-name values in independently reopened split PDFs, OCR recognition of the changed value in an exported PNG, a changed comparison against the pre-edit PDF and a final reopened saved value. Original hash stayed unchanged. Frontend build passed before the last history-clearing refinement; full release gates are next.
+- Latest fully verified installer remains 0.10.0. Radio/multi-select/detection/font/script compatibility and the full original roadmap remain active work.
+
+## 0.10.1 verified milestone (12 October 2026)
+
+- All 120 Python tests passed (72.85s); all 14 browser workflows passed, including reopened unusual-name split values, OCR recognition of staged content in PNG output and pixel comparison of staged form changes. Frontend/Rust/NSIS packaging and frozen-worker gates passed.
+- Actual bundled WebView2 passed the standard native smoke plus a separate unusual-name draft/print-preparation/undo check. Both receipts match the same application/worker hashes and report no captured page errors. No physical print job was submitted. Milestone preservation now verifies the additional native receipt's binary hashes too.
+- Installer: artifacts/releases/0.10.1/Folio_0.10.1_x64-setup.exe (57,325,854 bytes). SHA256: b55e3708fb342445b515fb01e288d7175667406c520f70b1e7bda7917e9157e9.
+- Resolves the 0.10.0 staged-value gaps for split/image/comparison and unusual name keys. Drafts are still memory-only until applied or saved. Advanced form compatibility and all original roadmap items remain separate work.
+
+Next: radio groups and field detection, followed by remaining font/text/OCR/conversion/scanner/local-model work. Native installed UI/dialogs, physical printing/scanning, high-DPI and unusual personal documents remain manual acceptance gates. Full goal remains active.

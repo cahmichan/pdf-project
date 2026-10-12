@@ -42,3 +42,7 @@ for rotation in (0,90,180,270):
         if kind in (pdf.PDF_WIDGET_TYPE_COMBOBOX,pdf.PDF_WIDGET_TYPE_LISTBOX):field.choice_values=['First','Second']
         page.add_widget(field)
 doc.save(folder/'forms.pdf');doc.close()
+doc=pdf.open();page=doc.new_page(width=500,height=700)
+for index,name in enumerate(('__proto__','constructor','toString')):
+    field=pdf.Widget();field.field_name=name;field.field_type=pdf.PDF_WIDGET_TYPE_TEXT;field.rect=pdf.Rect(40,80+index*90,400,115+index*90);field.field_value='Initial';field.text_fontsize=14;page.add_widget(field)
+doc.save(folder/'unusual-fields.pdf');doc.close()

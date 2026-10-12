@@ -1,5 +1,5 @@
 import { chromium } from '@playwright/test';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -138,3 +138,5 @@ try {
   if(browser)await browser.close();
   processHandle.kill();
 }
+
+console.log(execFileSync(process.execPath,[path.join(root,'scripts','native_form_drafts_smoke.mjs'),executable],{cwd:root,encoding:'utf8',timeout:90000}));
