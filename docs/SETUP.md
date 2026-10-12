@@ -113,3 +113,9 @@ For a mixed paragraph using Original paragraph styles, choose Original colors to
 Edit tools wait for matching text metadata. When opening another PDF, wait until its new page appears before editing. Version 0.19 passed packaged/native checks; earlier releases remain preserved. Exact live fonts, shaping, selected-run formatting and visible scan reconstruction remain work.
 
 Version 0.19.0 passed 194 Python tests, 26 browser workflows, frozen-worker checks and six native suites. Native checks cover first-source-color uniform override and no-op revision preservation. Browser toolbar layout was checked at 100 and 30 percent zoom. Exact font preview/shaping, actual Windows IME, hardware and installed dialogs remain further work/manual acceptance gates.
+
+## Original embedded font preview candidate (0.20)
+
+For existing text in Original font mode, supported embedded font data loads locally for the typing preview. The floating toolbar reports loading, original fonts loaded, or a preview substitute. Font data stays within the local app; original documents are unchanged. Loaded preview faces are released when the editor closes. Review the applied PDF for baseline and wrapping differences.
+
+The candidate verifies an embedded TrueType face with Greek/Chinese/Latin typing, width agreement and saved reopen. CFF, unembedded standard fonts, ambiguous subset names and resources beyond preview memory limits currently use substitutes; conversion/mapping and broader layout checks remain work. Version 0.19 remains the verified installer. Candidate native/package acceptance is pending.

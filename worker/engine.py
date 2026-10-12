@@ -728,6 +728,13 @@ class Engine:
             return self.info(session)
         if command == 'inspect_page':
             return self.inspect_page(session,args)
+        if command == 'preview_fonts':
+            self.check_revision(session,request)
+            from font_preview import resources
+            with pdf.open(self.current(session)) as doc:
+                number=int(args.get('page',1))
+                if not 1<=number<=len(doc):raise PDFError('Choose a page in the document.')
+                return resources(doc,doc[number-1],args)
         if command == 'inspect_pdfa':
             from archival import locate, validate
             runtime=locate(self.root)

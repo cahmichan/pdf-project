@@ -1,6 +1,6 @@
 [package]
 name = "folio"
-version = "0.19.0"
+version = "0.20.0"
 description = "Private local PDF reader and editor"
 edition = "2021"
 

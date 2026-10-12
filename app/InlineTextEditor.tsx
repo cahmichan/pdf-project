@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { TextRun } from './api';
+import type { FontResource, TextRun } from './api';
+import { loadPreviewFonts } from './font-preview';
 import { browserStyle, liveRuns } from './text-styles';
-export type TextDraft={documentId:string;page:number;kind:'edit'|'add';expected:string;sourceRect:number[];rect:number[];point:number[];text:string;size:number;color:string;font:string;sourceFont:string;mixedStyles?:boolean;colorMode?:'original'|'uniform';sourceRuns?:TextRun[];sourceSize:number;sourceColor:string;flags:number;rotation:number;caret?:number;selectedText?:string};
+export type TextDraft={documentId:string;page:number;kind:'edit'|'add';expected:string;sourceRect:number[];rect:number[];point:number[];text:string;size:number;color:string;font:string;sourceFont:string;mixedStyles?:boolean;colorMode?:'original'|'uniform';sourceRuns?:TextRun[];fontResources?:FontResource[];sourceSize:number;sourceColor:string;flags:number;rotation:number;caret?:number;selectedText?:string};
 const fonts=[['original','Original font'],['helv','Helvetica'],['hebo','Helvetica bold'],['heit','Helvetica italic'],['tiro','Times'],['tibo','Times bold'],['tiit','Times italic'],['cour','Courier']];
 type Selection={start:number;end:number};
 function selectionIn(element:HTMLElement):Selection|null{
@@ -21,6 +22,9 @@ export function InlineTextEditor({draft,zoom,pageWidth,pageHeight,busy,onChange,
   const [height,setHeight]=useState(28),[width,setWidth]=useState(100*zoom);
   const toolbar=useRef<HTMLDivElement>(null),[toolbarPosition,setToolbarPosition]=useState({left:0,top:0});
   const toolbarWidth=Math.min(500,Math.max(160,pageWidth*zoom-8));
+  const [fontFamilies,setFontFamilies]=useState<Record<string,string>>({}),[fontNotice,setFontNotice]=useState('');
+  useEffect(()=>{let disposed=false;const controller=new AbortController(),owned:FontFace[]=[];setFontFamilies({});const resources=draft.fontResources||[];setFontNotice(resources.some(font=>font.status==='embedded')?'Loading original font preview…':'Font preview uses a substitute; review the applied PDF.');void loadPreviewFonts(resources,controller.signal,face=>owned.push(face)).then(result=>{if(disposed){result.dispose();return;}setFontFamilies(result.families);setFontNotice(result.substitutes||!Object.keys(result.families).length?'Some fonts use a preview substitute; review the applied PDF.':'Original embedded fonts loaded for preview.');});return()=>{disposed=true;controller.abort();for(const face of owned)document.fonts.delete(face);};},[draft.fontResources]);
+  function runStyle(run:TextRun){const style=browserStyle(run.font,run.flags);return draft.font==='original'&&fontFamilies[run.font]?{...style,fontFamily:fontFamilies[run.font]}:style;}
   const rawWidth=draft.kind==='edit'?draft.sourceRect[2]-draft.sourceRect[0]:180;
   const centerX=(draft.rect[0]+draft.rect[2])/2*zoom,centerY=(draft.rect[1]+draft.rect[3])/2*zoom,rotation=draft.kind==='edit'?draft.rotation:0;
   const x=draft.kind==='edit'&&rotation?centerX-rawWidth*zoom/2:draft.rect[0]*zoom,y=draft.kind==='edit'&&rotation?centerY-(draft.sourceRect[3]-draft.sourceRect[1])*zoom/2:draft.rect[1]*zoom;
@@ -34,15 +38,15 @@ export function InlineTextEditor({draft,zoom,pageWidth,pageHeight,busy,onChange,
   useLayoutEffect(()=>{
     const element=input.current;if(!element||composition.current)return;
     const active=document.activeElement===element,selection=savedSelection.current||selectionIn(element);
-    element.replaceChildren(...runs.map(run=>{const span=document.createElement('span');span.textContent=run.text;const style=browserStyle(run.font,run.flags);Object.assign(span.style,{...style,fontSize:`${run.size*zoom}px`,color:run.color,position:'relative',top:`${run.offset*zoom}px`});return span;}));
+    element.replaceChildren(...runs.map(run=>{const span=document.createElement('span');span.textContent=run.text;const style=runStyle(run);Object.assign(span.style,{...style,fontKerning:'none',fontVariantLigatures:'none',fontSize:`${run.size*zoom}px`,color:run.color,position:'relative',top:`${run.offset*zoom}px`});return span;}));
     if(!draft.text||draft.text.endsWith('\n'))element.appendChild(document.createElement('br'));
     if(active&&selection)restoreSelection(element,selection);
     const context=document.createElement('canvas').getContext('2d');let line=0,longest=0;
-    if(context){for(const run of runs){const style=browserStyle(run.font,run.flags);context.font=`${style.fontStyle} ${style.fontWeight} ${run.size*zoom}px ${style.fontFamily}`;const lines=run.text.split('\n');for(let i=0;i<lines.length;i++){if(i){longest=Math.max(longest,line);line=0;}line+=context.measureText(lines[i]).width;}}longest=Math.max(longest,line);}
+    if(context){context.fontKerning='none';for(const run of runs){const style=runStyle(run);context.font=`${style.fontStyle} ${style.fontWeight} ${run.size*zoom}px ${style.fontFamily}`;const lines=run.text.split('\n');for(let i=0;i<lines.length;i++){if(i){longest=Math.max(longest,line);line=0;}line+=context.measureText(lines[i]).width;}}longest=Math.max(longest,line);}
     setWidth(Math.max(40,Math.min((rotation?Math.max(pageWidth,pageHeight):pageWidth-draft.rect[0])*zoom-4,Math.max(rawWidth*zoom,longest+8))));
     element.style.height='auto';setHeight(Math.max(draft.size*zoom*1.35,element.scrollHeight));
-  },[runs,width,zoom,pageWidth,pageHeight]);
-  useLayoutEffect(()=>{const element=input.current,parent=element?.closest('.paper');if(!element||!parent||!toolbar.current)return;const area=element.getBoundingClientRect(),paper=parent.getBoundingClientRect(),barHeight=toolbar.current.offsetHeight;const top=area.top-paper.top;setToolbarPosition({left:Math.max(0,Math.min(area.left-paper.left,paper.width-toolbarWidth-4)),top:top>=barHeight+6?top-barHeight-6:area.bottom-paper.top+8});},[runs,height,width,zoom,toolbarWidth]);
+  },[runs,fontFamilies,width,zoom,pageWidth,pageHeight]);
+  useLayoutEffect(()=>{const element=input.current,parent=element?.closest('.paper');if(!element||!parent||!toolbar.current)return;const area=element.getBoundingClientRect(),paper=parent.getBoundingClientRect(),barHeight=toolbar.current.offsetHeight;const top=area.top-paper.top;setToolbarPosition({left:Math.max(0,Math.min(area.left-paper.left,paper.width-toolbarWidth-4)),top:top>=barHeight+6?top-barHeight-6:area.bottom-paper.top+8});},[runs,fontFamilies,fontNotice,height,width,zoom,toolbarWidth]);
   useEffect(()=>{const element=input.current;if(!element)return;undo.current=[];redo.current=[];element.focus();const selected=draft.selectedText?draft.text.indexOf(draft.selectedText):-1,caret=draft.caret??draft.text.length;savedSelection.current={start:selected>=0?selected:caret,end:selected>=0?selected+draft.selectedText!.length:caret};restoreSelection(element,savedSelection.current);},[draft.expected,draft.kind,draft.sourceRect.join(','),draft.point.join(',')]);
   return <>
     {draft.kind==='edit'&&<div className="inline-text-mask" style={{left:draft.rect[0]*zoom,top:draft.rect[1]*zoom,width:(draft.rect[2]-draft.rect[0])*zoom,height:(draft.rect[3]-draft.rect[1])*zoom}}/>}
@@ -54,7 +58,7 @@ export function InlineTextEditor({draft,zoom,pageWidth,pageHeight,busy,onChange,
     }}/>
     <div ref={toolbar} className="inline-text-toolbar" style={{...toolbarPosition,width:toolbarWidth}}>
       <label>Font<select aria-label="Text font" disabled={busy} value={draft.font} onChange={event=>change({...draft,font:event.target.value})}>{fonts.filter(([value])=>value!=='original'||draft.kind==='edit').map(([value,label])=><option key={value} value={value}>{value==='original'?(draft.mixedStyles?'Original paragraph styles':`${label} (${draft.sourceFont})`):label}</option>)}</select></label>
-      <label>Size<input aria-label="Text size" type="number" min="1" max="300" disabled={busy} value={draft.size} onChange={event=>change({...draft,size:Number(event.target.value)})}/></label>{draft.mixedStyles&&draft.font==='original'&&<label>Colors<select aria-label="Paragraph color mode" disabled={busy} value={draft.colorMode||'original'} onChange={event=>change({...draft,colorMode:event.target.value as 'original'|'uniform',color:event.target.value==='original'?draft.sourceColor:draft.color})}><option value="original">Original colors</option><option value="uniform">One color</option></select></label>}<input aria-label="Text color" type="color" disabled={busy} value={draft.color} onChange={event=>change({...draft,color:event.target.value,colorMode:'uniform'})}/><button disabled={busy||(draft.kind==='add'&&!draft.text.trim())} onClick={onApply}>Apply text</button><button disabled={busy} onClick={onCancel}>Cancel text</button>
+      <label>Size<input aria-label="Text size" type="number" min="1" max="300" disabled={busy} value={draft.size} onChange={event=>change({...draft,size:Number(event.target.value)})}/></label>{draft.mixedStyles&&draft.font==='original'&&<label>Colors<select aria-label="Paragraph color mode" disabled={busy} value={draft.colorMode||'original'} onChange={event=>change({...draft,colorMode:event.target.value as 'original'|'uniform',color:event.target.value==='original'?draft.sourceColor:draft.color})}><option value="original">Original colors</option><option value="uniform">One color</option></select></label>}<input aria-label="Text color" type="color" disabled={busy} value={draft.color} onChange={event=>change({...draft,color:event.target.value,colorMode:'uniform'})}/><button disabled={busy||(draft.kind==='add'&&!draft.text.trim())} onClick={onApply}>Apply text</button><button disabled={busy} onClick={onCancel}>Cancel text</button>{draft.kind==='edit'&&draft.font==='original'&&<small role="status" style={{width:'100%'}}>{fontNotice}</small>}
     </div>
   </>;
 }
