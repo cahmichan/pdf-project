@@ -2,7 +2,7 @@
 
 The core app installer needs Windows x64 and the free Microsoft Edge WebView2 runtime. It includes its PDF worker and English OCR model. Node, Rust, Python and Microsoft Office are not required to run the installed core app.
 
-Latest verified installer milestone: `artifacts/releases/0.12.0/Folio_0.12.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
+Latest verified installer milestone: `artifacts/releases/0.13.0/Folio_0.13.0_x64-setup.exe`. This build includes offline OCR, comparison, image tools, configured free Office import, reader links, print preview, ink/stamps, certificate signing/inspection, native worker cancellation saved batch workflows and configured archival conversion.
 
 ## Free Office runtime
 
@@ -64,4 +64,14 @@ Version 0.11 adds standard radio groups under Create form field: choose Radio gr
 
 On Home, choose Scan photos, then Add photos. Import individual JPG/PNG/TIFF/BMP pictures, including photos copied from a phone. Review the detected boundary; drag the four handles or enter X/Y percentages in top-left, top-right, bottom-right, bottom-left order. If detection misses the paper, adjust manually or use the whole photo. Preview perspective correction with Original color, Grayscale, Clean document or Black and white. Rotate and move pages earlier/later as needed. Create scanned PDF opens a working copy; review, optionally run Convert → Make scanned PDF searchable for offline English OCR, then Save a copy. Original photos remain unchanged.
 
-Photo limits: 40 million input pixels, corrected output up to 4000 pixels per edge/16 million total, and 100 photos per PDF. Multi-frame image files need individual frames first. Review fine print, uneven lighting and automatic corners; filters can alter fine detail. Curved-page dewarping, camera capture and physical scanner control remain future work. Packaged/native scanning commands and the complete browser workflow passed. Native OS photo selection and installed UI remain manual acceptance checks.
+Photo limits: 40 million input pixels, corrected output up to 4000 pixels per edge/16 million total, and 100 photos per PDF. Multi-frame image files need individual frames first. Review fine print, uneven lighting and automatic corners; filters can alter fine detail. Curved-page dewarping and physical scanner control remain future work. Packaged/native scanning commands and the complete browser workflow passed. Native OS photo selection and installed UI remain manual acceptance checks.
+
+## Direct text editing (0.13)
+
+Choose Edit, then click existing text. Type directly on the page; select words within the editor with the mouse or standard keyboard shortcuts. The floating toolbar chooses font, size and color. Apply text or Ctrl+Enter commits one undoable working revision; Escape/Cancel text discards the draft. Add new text starts with a click at the desired position, then typing. No rectangle drawing or sidebar text box is required for these tools. Save a copy also applies staged text. Drafts survive page navigation in memory; return to the indicated page to continue. Apply/save before closing the app.
+
+Original embedded fonts are reused when glyph coverage permits. Uniform horizontal paragraphs (including rotated pages) are supported; mixed styles require an explicit replacement font. Text wraps into available free space, and placement rejects collisions or overflow. Automatic movement of surrounding paragraphs, angled baselines, complex shaping and scan text reconstruction remain work. Version 0.13 passed packaged and native direct edit/insert/undo checks. Selecting text without changing it does not create a new revision.
+
+## Camera capture (0.13)
+
+In Scan photos, choose Use camera, then Start camera. Grant the system prompt when requested. Capture photo can add multiple pages. Stop camera releases the video stream; Done returns to corner review/enhancement. Switching cameras requires stopping first. Audio is never requested. Camera frames are kept as private local photos under the Folio app-data scan-captures folder; deletion/retention controls remain work. Synthetic-camera tests cover capture, denied permission and closing while permission is pending. Synthetic camera capture/create/export/reopen and track release also passed in the bundled WebView2. Real camera permission/capture remains a manual acceptance check.

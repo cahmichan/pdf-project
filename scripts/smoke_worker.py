@@ -41,6 +41,13 @@ try:
     word=command({'command':'export','session':info['id'],'args':{'path':str(output/'verified.docx'),'mode':'docx','overwrite':True}})
     with pdf.open(exported['path']) as doc:
         assert 'Packaged worker verified' in doc[0].get_text()
+    direct=command({'command':'open','args':{'path':str(root/'artifacts'/'fixtures'/'sample.pdf')}})
+    paragraph=command({'command':'inspect_page','session':direct['id'],'args':{'page':1}})['text_blocks'][0]
+    direct=command({'command':'apply','session':direct['id'],'revision':direct['revision'],'args':{'operation':'edit_text','page':1,'expected':paragraph['text'],'source_rect':paragraph['raw_rect'],'text':'Packaged direct heading','font':'original'}})
+    direct=command({'command':'apply','session':direct['id'],'revision':direct['revision'],'args':{'operation':'insert_text','page':1,'point':[45,320],'text':'Packaged click and type','font':'tiro','size':12}})
+    direct_output=command({'command':'export','session':direct['id'],'args':{'path':str(output/'direct-text.pdf'),'overwrite':True}})
+    with pdf.open(direct_output['path']) as checked:
+        assert 'Packaged direct heading' in checked[0].get_text() and 'Packaged click and type' in checked[0].get_text() and 'Folio sample document - page 1' not in checked[0].get_text()
     capabilities=command({'command':'capabilities'})
     assert capabilities['ocr_languages']==['eng']
     scan=command({'command':'open','args':{'path':str(root/'artifacts'/'fixtures'/'scan.pdf')}})
@@ -87,6 +94,11 @@ try:
     receipt['radio_group_create_fill_reopen']=True
     photo=command({'command':'scan_prepare','args':{'path':str(root/'artifacts'/'fixtures'/'scan-photo.png')}})
     assert photo['detected']
+    import base64
+    captured=command({'command':'scan_capture','args':{'image':'data:image/png;base64,'+base64.b64encode((root/'artifacts'/'fixtures'/'scan-photo.png').read_bytes()).decode()}})
+    assert captured['detected'] and Path(captured['path']).is_file()
+    receipt['camera_frame_import']=True
+    receipt['direct_text_edit_insert_reopen']=True
     processed=command({'command':'scan_preview','args':{**photo,'filter':'black_white'}})
     assert processed['preview'].startswith('data:image/jpeg;base64,')
     photo_document=command({'command':'scan_create','args':{'pages':[{**photo,'filter':'document'},{**photo,'filter':'black_white','rotation':90}]}})

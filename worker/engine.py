@@ -371,8 +371,11 @@ class Engine:
                     raise PDFError('Choose a page in this document.')
                 page = doc[n]
                 # Map visual UI rectangles through derotation without altering CropBox/Rotate.
-                rect = page.rect if operation in ('replace_image','delete_image','edit_annotation','delete_annotation','ink') else valid_rect(args.get('rect', [40, 40, 240, 100]), page)
-                if operation in ('add_text', 'replace_text'):
+                rect = page.rect if operation in ('replace_image','delete_image','edit_annotation','delete_annotation','ink','edit_text','insert_text') else valid_rect(args.get('rect', [40, 40, 240, 100]), page)
+                if operation in ('edit_text','insert_text'):
+                    from direct_text import edit
+                    edit(doc,page,args)
+                elif operation in ('add_text', 'replace_text'):
                     size = float(args.get('size', 12))
                     text = str(args.get('text', ''))
                     # Fit on a scratch page before deleting original content.
@@ -520,7 +523,8 @@ class Engine:
                     for line in block['lines']:
                         blocks.append({'rect': list(pdf.Rect(line['bbox'])*page.rotation_matrix), 'text': ''.join(span['text'] for span in line['spans']),
                                        'size': line['spans'][0]['size'] if line['spans'] else 12})
-            return {'text': page.get_text(), 'blocks': blocks,
+            from direct_text import paragraphs
+            return {'text': page.get_text(), 'blocks': blocks, 'text_blocks':paragraphs(page),
                     'forms': [{'id': str(w.xref), 'name': w.field_name, 'type': w.field_type_string,
                                'value': w.field_value, 'rect': list(w.rect*page.rotation_matrix), 'raw_rect':list(w.rect), 'rotation':page.rotation,
                                'read_only':bool(w.field_flags & pdf.PDF_FIELD_IS_READ_ONLY),
@@ -681,8 +685,9 @@ class Engine:
         command = request['command']; args = request.get('args', {})
         if command == 'startup':
             return None
-        if command in ('scan_prepare', 'scan_preview', 'scan_create'):
-            from scanning import prepare, preview, create
+        if command in ('scan_prepare', 'scan_preview', 'scan_create', 'scan_capture'):
+            from scanning import prepare, preview, create, capture
+            if command == 'scan_capture':return capture(self,args)
             if command == 'scan_prepare':return prepare(args)
             if command == 'scan_preview':return preview(args)
             return create(self,args)

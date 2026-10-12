@@ -2,6 +2,7 @@
 import base64
 import io
 import math
+import uuid
 from pathlib import Path
 
 import cv2
@@ -67,6 +68,32 @@ def prepare(args):
     corners, detected = detect(image)
     return {'path': str(path), 'hash': before, 'width': image.shape[1], 'height': image.shape[0],
             'corners': corners, 'detected': detected, 'preview': thumbnail(image)}
+
+
+def capture(engine, args):
+    from engine import PDFError
+    value = args.get('image')
+    if not isinstance(value, str) or len(value) > 24 * 1024 * 1024:
+        raise PDFError('Camera frame is missing or too large.')
+    header, separator, encoded = value.partition(',')
+    formats = {'data:image/jpeg;base64': ('JPEG', '.jpg'), 'data:image/png;base64': ('PNG', '.png')}
+    if not separator or header not in formats:raise PDFError('Capture a JPEG or PNG camera frame.')
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+        with Image.open(io.BytesIO(raw)) as frame:
+            if frame.format != formats[header][0] or min(frame.size) < 32 or frame.width * frame.height > 40_000_000:
+                raise ValueError('Invalid frame dimensions or format')
+            frame.verify()
+    except Exception as error:
+        raise PDFError('The camera frame could not be decoded. Capture it again.') from error
+    folder = engine.root / 'scan-captures'; folder.mkdir(exist_ok=True)
+    destination = folder / ('Capture-' + uuid.uuid4().hex + formats[header][1])
+    try:
+        with destination.open('xb') as stream:stream.write(raw)
+        return {**prepare({'path': str(destination)}), 'name': 'Camera photo'}
+    except Exception:
+        destination.unlink(missing_ok=True)
+        raise
 
 
 def process(args):

@@ -67,3 +67,26 @@ def test_exif_orientation_and_no_boundary_fallback(tmp_path):
     assert (scanned['width'], scanned['height']) == (500, 300)
     assert not scanned['detected']
     assert scanned['corners'] == [[0, 0], [1, 0], [1, 1], [0, 1]]
+
+
+@pytest.mark.parametrize('format,mime', [('JPEG', 'jpeg'), ('PNG', 'png')])
+def test_camera_frame_import_is_private_and_creates_reopenable_scan(tmp_path, format, mime):
+    import base64
+    import io
+    image = Image.new('RGB', (300, 500), 'white'); buffer = io.BytesIO();image.save(buffer, format=format)
+    raw = buffer.getvalue(); engine = Engine(tmp_path / 'data')
+    request = {'command': 'scan_capture', 'args': {'image': f'data:image/{mime};base64,' + base64.b64encode(raw).decode()}}
+    first, second = engine.dispatch(request), engine.dispatch(request)
+    assert first['path'] != second['path']
+    assert Path(first['path']).is_relative_to(engine.root / 'scan-captures')
+    assert Path(first['path']).read_bytes() == raw
+    document = engine.dispatch({'command': 'scan_create', 'args': {'pages': [first, second]}})
+    assert document['source'] is None and document['page_count'] == 2
+    with pdfium.PdfDocument(document['path']) as reopened:assert len(reopened) == 2
+
+
+@pytest.mark.parametrize('value', [None, 'data:image/jpeg;base64,%%%bad', 'data:text/html;base64,AAAA', 'data:image/png;base64,AAAA'])
+def test_invalid_camera_frames_do_not_create_capture_files(tmp_path, value):
+    engine = Engine(tmp_path / 'data')
+    with pytest.raises(PDFError):engine.dispatch({'command': 'scan_capture', 'args': {'image': value}})
+    assert not list((engine.root / 'scan-captures').glob('*'))

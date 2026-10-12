@@ -3,6 +3,30 @@ use std::{io::{BufRead, BufReader, Write}, process::{Child, ChildStdin, Command,
 use serde_json::Value;
 use tauri::{Emitter, Manager};
 
+fn allow_session_assets(app: &tauri::AppHandle, value: &Value) -> Result<(),String> {
+    let sessions = app.path().app_data_dir().map_err(|e|e.to_string())?.join("sessions");
+    fn visit(app: &tauri::AppHandle, root: &std::path::Path, value: &Value) -> Result<(),String> {
+        match value {
+            Value::Object(object) => {
+                if let Some(path) = object.get("path").and_then(Value::as_str) {
+                    let path = std::path::Path::new(path);
+                    let image_or_pdf = matches!(path.extension().and_then(|s|s.to_str()),Some("pdf"|"png"|"jpg"|"jpeg"));
+                    if path.is_absolute() && path.starts_with(root) && !path.components().any(|p|matches!(p,std::path::Component::ParentDir)) && image_or_pdf && path.is_file() {
+                        // Windows package virtualization can redirect a newly created child
+                        // outside the canonical directory originally granted at startup.
+                        app.asset_protocol_scope().allow_file(path).map_err(|e|e.to_string())?;
+                    }
+                }
+                for item in object.values() { if item.is_object() || item.is_array() { visit(app,root,item)?; } }
+            }
+            Value::Array(array) => { for item in array { visit(app,root,item)?; } }
+            _ => {}
+        }
+        Ok(())
+    }
+    visit(app,&sessions,value)
+}
+
 struct Worker { child: Arc<Mutex<Child>>, input: ChildStdin, output: mpsc::Receiver<Result<String,String>> }
 fn stop_worker(child: &mut Child) -> Result<(),String> {
     if child.try_wait().map_err(|e| e.to_string())?.is_some() { return Ok(()); }
@@ -63,6 +87,12 @@ async fn pdf_cancel(state: tauri::State<'_,Backend>) -> Result<(),String> {
 
 #[tauri::command]
 async fn pdf_command(app: tauri::AppHandle, state: tauri::State<'_,Backend>, request: Value) -> Result<Value,String> {
+    if request["command"] == "native_paths" && std::env::var_os("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").is_some() {
+        let data = app.path().app_data_dir().map_err(|e| e.to_string())?;
+        let path = request["args"]["path"].as_str().unwrap_or("");
+        let scope = app.asset_protocol_scope();
+        return Ok(serde_json::json!({"data":data,"canonical_data":std::fs::canonicalize(&data).ok(),"path":path,"canonical_path":std::fs::canonicalize(path).ok(),"patterns":scope.allowed_patterns().iter().map(|p|p.as_str().to_string()).collect::<Vec<_>>(),"path_allowed":scope.is_allowed(path),"file_open":std::fs::File::open(path).map(|_|"ok".to_string()).unwrap_or_else(|e|e.to_string())}));
+    }
     if request["command"] == "startup" {
         let path = std::env::args().skip(1).find(|argument| argument.to_lowercase().ends_with(".pdf"));
         return Ok(serde_json::to_value(path).map_err(|e| e.to_string())?);
@@ -89,7 +119,7 @@ async fn pdf_command(app: tauri::AppHandle, state: tauri::State<'_,Backend>, req
                 Err(error) => { *guard = None; return Err(format!("Invalid worker response: {error}. Retry to reconnect.")); },
             };
             if value["event"] == "progress" { let _ = app.emit("pdf-progress", &value); continue; }
-            if value["ok"] == true { return Ok(value["result"].clone()); }
+            if value["ok"] == true { let result=value["result"].clone();allow_session_assets(&app,&result)?;return Ok(result); }
             return Err(value["error"]["message"].as_str().unwrap_or("PDF operation failed").to_string());
         }
     }).await.map_err(|e| e.to_string())?

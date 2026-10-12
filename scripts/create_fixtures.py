@@ -56,3 +56,7 @@ cv2.putText(photo_page,"SCAN TEST",(40,90),cv2.FONT_HERSHEY_SIMPLEX,1.4,(20,20,2
 for y in range(140,600,45):cv2.line(photo_page,(40,y),(440,y),(60,60,60),3)
 photo_transform=cv2.getPerspectiveTransform(np.float32([[0,0],[499,0],[499,699],[0,699]]),np.float32([[130,100],[700,145],[650,850],[90,790]]))
 Image.fromarray(cv2.warpPerspective(photo_page,photo_transform,(800,950),borderValue=(35,50,65))).save(folder/"scan-photo.png")
+
+# Synthetic video input; native tests never activate a real camera.
+camera_frame=cv2.cvtColor(cv2.imread(str(folder/"scan-photo.png")),cv2.COLOR_BGR2YUV_I420).tobytes()
+(folder/"camera.y4m").write_bytes(b"YUV4MPEG2 W800 H950 F30:1 Ip A1:1 C420jpeg\n"+b"FRAME\n"+camera_frame)

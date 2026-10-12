@@ -1,25 +1,49 @@
+import { debugPort, stopNative } from './native_test_runtime.mjs';
 import { chromium } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 const root=process.cwd();
+const port=await debugPort();
 const executable=process.argv[2] || path.join(root,'src-tauri','target','release','folio.exe');
 const fixture=path.join(root,'artifacts','fixtures','sample.pdf');
 const receiptPath=path.join(root,'artifacts','native-smoke');fs.mkdirSync(receiptPath,{recursive:true});
-const processHandle=spawn(executable,[fixture],{cwd:path.dirname(executable),windowsHide:true,env:{...process.env,WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:'--remote-debugging-port=9222'}});
+const processHandle=spawn(executable,[fixture],{cwd:path.dirname(executable),windowsHide:true,env:{...process.env,WEBVIEW2_USER_DATA_FOLDER:path.join(receiptPath,`webview-${Date.now()}`),WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:`--remote-debugging-port=${port}`}});
 let browser;
 try {
   for(let attempt=0;attempt<60;attempt++) {
     if(processHandle.exitCode!==null)throw new Error(`Native application exited: ${processHandle.exitCode}`);
-    try {browser=await chromium.connectOverCDP('http://127.0.0.1:9222');break;}catch {await new Promise(resolve=>setTimeout(resolve,500));}
+    try {browser=await chromium.connectOverCDP(`http://127.0.0.1:${port}`);break;}catch {await new Promise(resolve=>setTimeout(resolve,500));}
   }
   if(!browser)throw new Error('WebView2 debugging endpoint did not become available.');
   const page=browser.contexts()[0].pages()[0];
   if(!page)throw new Error('Native WebView2 page not found.');
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.getByLabel('Current page').waitFor();
+  console.log('Native asset diagnostic',await page.evaluate(async()=>{const invoke=request=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request});const info=await invoke({command:'info',session:document.querySelector('.paper').dataset.session});return invoke({command:'native_paths',args:{path:info.path}});}));
   await page.locator('.textLayer').filter({hasText:'Folio sample document - page 1'}).waitFor({timeout:60000});
+  const originalAssetStatus=await page.evaluate(async original=>{const response=await fetch(`http://asset.localhost/${encodeURIComponent(original)}`);return response.status;},fixture);
+  if(originalAssetStatus!==403)throw new Error(`Original source asset was unexpectedly exposed: ${originalAssetStatus}`);
   await page.screenshot({path:path.join(receiptPath,'reader.png')});
+  await page.getByRole('button',{name:'Edit',exact:true}).click();
+  await page.locator('.textLayer span').filter({hasText:'Folio sample document - page 1'}).click();
+  await page.getByLabel('Edit text on page').fill('Native direct heading');
+  await page.screenshot({path:path.join(receiptPath,'direct-text-editing.png')});
+  await page.getByRole('button',{name:'Apply text',exact:true}).click();
+  await page.locator('.textLayer').filter({hasText:'Native direct heading'}).waitFor();
+  await page.getByRole('button',{name:'Add new text',exact:true}).click();
+  await page.locator('.page-loading').waitFor({state:'hidden'});
+  const directPaper=await page.locator('.paper').boundingBox();if(!directPaper)throw new Error('Native direct text paper missing.');
+  await page.mouse.click(directPaper.x+45,directPaper.y+320);
+  await page.getByLabel('New text on page').fill('Native click and type');
+  await page.getByLabel('New text on page').press('Control+Enter');
+  await page.locator('.textLayer').filter({hasText:'Native click and type'}).waitFor();
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('.textLayer')?.textContent.includes('Native direct heading')&&!document.querySelector('.textLayer')?.textContent.includes('Native click and type'));
+  await page.getByRole('button',{name:'Undo',exact:true}).click();
+  await page.locator('.textLayer').filter({hasText:'Folio sample document - page 1'}).waitFor();
+  await page.getByRole('button',{name:'Read',exact:true}).click();
   await page.getByRole('button',{name:'Go to page 3',exact:true}).click();
   await page.locator('.textLayer').filter({hasText:'Folio sample document - page 3'}).waitFor();
   await page.getByLabel('Current page').fill('1');
@@ -94,11 +118,12 @@ try {
   await page.waitForFunction(()=>!document.querySelector('.textLayer')?.textContent.includes('Native 88/3'));
   await page.locator('.page-loading').waitFor({state:'hidden'});
   await page.getByRole('button',{name:'Edit',exact:true}).click();
-  await page.getByLabel('Text',{exact:true}).fill('Native WebView2 verified');
+  await page.getByRole('button',{name:'Add new text',exact:true}).click();
   await page.locator('.page-loading').waitFor({state:'hidden'});
   const paper=await page.locator('.paper').boundingBox();
-  await page.mouse.move(paper.x+45,paper.y+320);await page.mouse.down();await page.mouse.move(paper.x+350,paper.y+365);await page.mouse.up();
-  await page.getByRole('button',{name:'Apply to working copy'}).click();
+  await page.mouse.click(paper.x+45,paper.y+320);
+  await page.getByLabel('New text on page').fill('Native WebView2 verified');
+  await page.getByRole('button',{name:'Apply text',exact:true}).click();
   await page.locator('.textLayer').filter({hasText:'Native WebView2 verified'}).waitFor({timeout:30000});
   await page.screenshot({path:path.join(receiptPath,'editor.png')});
   await page.getByRole('button',{name:'Annotate',exact:true}).click();
@@ -156,22 +181,25 @@ try {
   if(split.items.length!==2)throw new Error('Native split failed.');
   const photoScan=await page.evaluate(async input=>{
     const invoke=request=>window.__TAURI_INTERNALS__.invoke('pdf_command',{request});
-    const photo=await invoke({command:'scan_prepare',args:{path:input.photo}});
+    const photo=await invoke({command:'scan_capture',args:{image:input.image}});
     if(!photo.detected)throw new Error('Native scan corner detection failed.');
     const preview=await invoke({command:'scan_preview',args:{...photo,filter:'document'}});
     if(!preview.preview.startsWith('data:image/jpeg;base64,'))throw new Error('Native scan preview failed.');
     const scanned=await invoke({command:'scan_create',args:{pages:[{...photo,filter:'document'},{...photo,filter:'black_white',rotation:90}]}});
     const exported=await invoke({command:'export',session:scanned.id,args:{path:input.output,overwrite:true}});
     return invoke({command:'open',args:{path:exported.path}});
-  },{photo:path.join(root,'artifacts','fixtures','scan-photo.png'),output:path.join(receiptPath,'photo-scanned.pdf')});
+  },{image:'data:image/png;base64,'+fs.readFileSync(path.join(root,'artifacts','fixtures','scan-photo.png')).toString('base64'),output:path.join(receiptPath,'photo-scanned.pdf')});
   if(photoScan.page_count!==2||photoScan.pages[0].width>=photoScan.pages[0].height||photoScan.pages[1].width<=photoScan.pages[1].height)throw new Error('Native scanned page ordering/rotation mismatch.');
   const digest=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,configured_free_archival_conversion:true,visual_page_organizer:true,split_pdf_reopen:true,precise_crop_and_custom_numbering:true,on_page_form_fill_and_undo:true,radio_create_fill_and_undo:true,photo_scan_perspective_enhance_reopen:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
+  const result={passed:true,executable,executable_sha256:digest(executable),worker_sha256:digest(path.join(path.dirname(executable),'pdf-worker.exe')),url:page.url(),native_webview_render:true,packaged_worker_edit:true,worker_cancel_and_reconnect:true,internal_page_link:true,print_preview_loaded:true,configured_free_office_import:true,batch_processing:true,ink_stamp_annotations:true,offline_certificate_signing:true,configured_free_archival_conversion:true,visual_page_organizer:true,split_pdf_reopen:true,precise_crop_and_custom_numbering:true,on_page_form_fill_and_undo:true,radio_create_fill_and_undo:true,photo_scan_perspective_enhance_reopen:true,camera_frame_import:true,direct_text_edit_insert_and_undo:true,private_assets_load_and_original_asset_blocked:true,errors,manual_checks_remaining:['native file dialogs','actual printing','scanner','installer UI','large and unusual PDFs']};
   if(errors.length)throw new Error(JSON.stringify(errors));
   fs.writeFileSync(path.join(receiptPath,'receipt.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
+} catch(error) {
+  if(browser){const page=browser.contexts()[0].pages()[0];console.error(JSON.stringify({url:page.url(),body:await page.locator('body').innerText(),layers:await page.locator('.textLayer').evaluateAll(elements=>elements.map(element=>({text:element.textContent,rect:element.getBoundingClientRect().toJSON(),style:element.getAttribute('style')})))}));await page.screenshot({path:path.join(receiptPath,'native-failure.png')});}
+  throw error;
 } finally {
   if(browser)await browser.close();
-  processHandle.kill();
+  stopNative(processHandle);
 }
 
 console.log(execFileSync(process.execPath,[path.join(root,'scripts','native_form_drafts_smoke.mjs'),executable],{cwd:root,encoding:'utf8',timeout:90000}));

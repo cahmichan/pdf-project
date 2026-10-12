@@ -8,11 +8,13 @@ export interface DocumentInfo {
 }
 export interface PageInfo {
   text: string; blocks: {rect:number[];text:string;size:number}[];
+  text_blocks?:TextBlock[];
   forms: {id:string;name:string;type:string;value:string|number;rect:number[];label?:string;on_state?:string|boolean|null;raw_rect?:number[];rotation?:number;read_only?:boolean;multiline?:boolean;password?:boolean;multi_select?:boolean;max_length?:number;choices?:string[];states?:{normal?:string[]}}[];
   annotations: {id:number;type:string;rect:number[];content:string}[];
   images: {id:number;rect:number[];width:number;height:number}[];
   links: {rect:number[];page:number;uri:string}[];
 }
+export interface TextBlock {id:number;text:string;rect:number[];raw_rect:number[];size:number;font:string;flags:number;color:string;rotation:number;horizontal:boolean;origin:number[];mixed_styles:boolean;}
 let sequence = 0;
 export async function command<T>(name: string, document?: DocumentInfo | null, args: Record<string,unknown> = {}): Promise<T> {
   const request = {command:name, session:document?.id, revision:document?.revision, args, job:++sequence};

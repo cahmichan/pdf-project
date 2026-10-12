@@ -1,20 +1,22 @@
+import { debugPort, stopNative } from './native_test_runtime.mjs';
 import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 const root=process.cwd();
+const port=await debugPort();
 const executable=process.argv[2]||path.join(root,'src-tauri','target','release','folio.exe');
 const folder=path.join(root,'artifacts','native-smoke');fs.mkdirSync(folder,{recursive:true});
 const source=path.join(root,'artifacts','fixtures','unusual-fields.pdf');
 const hash=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const original=hash(source);
-const child=spawn(executable,[source],{cwd:path.dirname(executable),windowsHide:true,env:{...process.env,WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:'--remote-debugging-port=9223'}});
+const child=spawn(executable,[source],{cwd:path.dirname(executable),windowsHide:true,env:{...process.env,WEBVIEW2_USER_DATA_FOLDER:path.join(folder,`webview-${Date.now()}`),WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:`--remote-debugging-port=${port}`}});
 let browser;
 try {
   for(let attempt=0;attempt<60;attempt++){
     if(child.exitCode!==null)throw new Error(`Native app exited ${child.exitCode}`);
-    try{browser=await chromium.connectOverCDP('http://127.0.0.1:9223');break;}catch{await new Promise(resolve=>setTimeout(resolve,500));}
+    try{browser=await chromium.connectOverCDP(`http://127.0.0.1:${port}`);break;}catch{await new Promise(resolve=>setTimeout(resolve,500));}
   }
   if(!browser)throw new Error('Native form WebView2 endpoint unavailable.');
   const page=browser.contexts()[0].pages()[0];const errors=[];page.on('pageerror',error=>errors.push(error.message));
@@ -37,4 +39,4 @@ try {
   if(errors.length||hash(source)!==original)throw new Error(`Native draft errors: ${JSON.stringify(errors)}`);
   const result={passed:true,executable_sha256:hash(executable),worker_sha256:hash(path.join(path.dirname(executable),'pdf-worker.exe')),unusual_field_names:true,staged_print_preparation_and_undo:true,source_unchanged:true,errors,physical_print_submitted:false};
   fs.writeFileSync(path.join(folder,'form-drafts-receipt.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
-}finally{if(browser)await browser.close();child.kill();}
+}finally{if(browser)await browser.close();stopNative(child);}

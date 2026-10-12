@@ -18,7 +18,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(400);return
         try:
             length=int(self.headers.get('Content-Length','0'))
-            if length>1024*1024:raise ValueError('Request is too large')
+            if length>25*1024*1024:raise ValueError('Request is too large')
             result=engine.dispatch(json.loads(self.rfile.read(length)))
             payload={'ok':True,'result':result}
         except Exception as error:

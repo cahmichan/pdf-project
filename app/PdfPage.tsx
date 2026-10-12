@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { GlobalWorkerOptions, getDocument, TextLayer, type PDFDocumentProxy, type RenderTask } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import 'pdfjs-dist/web/pdf_viewer.css';
+import { InlineTextEditor, type TextDraft } from './InlineTextEditor';
 import { FormOverlay } from './FormOverlay';
-import { documentUrl, type DocumentInfo, type PageInfo } from './api';
+import { documentUrl, type DocumentInfo, type PageInfo, type TextBlock } from './api';
 GlobalWorkerOptions.workerSrc = workerUrl;
 
-export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink,strokes,onStroke,inkWidth,inkColor,fields,fieldValues,onFieldChange,busy}: {
+export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink,strokes,onStroke,inkWidth,inkColor,fields,fieldValues,onFieldChange,busy,textBlocks,textDraft,onBeginText,onChangeText,onApplyText,onCancelText}: {
+  textBlocks:TextBlock[];textDraft:TextDraft|null;onBeginText:(block:TextBlock|null,point:number[],selected:string,caret?:number)=>void;onChangeText:(draft:TextDraft)=>void;onApplyText:()=>void;onCancelText:()=>void;
   fields:PageInfo['forms'];fieldValues:Record<string,string|number>;onFieldChange:(id:string,value:string|number)=>void;busy:boolean;
   document:DocumentInfo;page:number;zoom:number;tool:string;
   onSelect:(rect:number[])=>void;selection:number[]|null;
@@ -50,6 +52,9 @@ export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink
         if (cancelled) return;
         textLayer.current.replaceChildren();
         textLayer.current.style.setProperty('--scale-factor',String(zoom));
+        textLayer.current.style.setProperty('--total-scale-factor',String(zoom*pdfPage.userUnit));
+        textLayer.current.style.setProperty('--scale-round-x','1px');
+        textLayer.current.style.setProperty('--scale-round-y','1px');
         layer=new TextLayer({textContentSource:await pdfPage.getTextContent(),container:textLayer.current,viewport});
         await layer.render();
         if (!cancelled) {setRendered({path:document.path,revision:document.revision,page,zoom});setLoading(false);}
@@ -58,7 +63,8 @@ export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink
     void paint();
     return ()=>{cancelled=true;render?.cancel();layer?.cancel();};
   },[loaded,page,zoom,document.path,document.revision]);
-  const choose = ['crop','add_text','replace_text','add_image','highlight','underline','strikeout','rectangle','stamp','ink','comment','redact','add_form'].includes(tool);
+  const directText=['add_text','replace_text'].includes(tool);
+  const choose = ['crop','add_image','highlight','underline','strikeout','rectangle','stamp','ink','comment','redact','add_form'].includes(tool);
   function point(event:React.PointerEvent):[number,number] {
     const bounds=wrapper.current!.getBoundingClientRect();
     return [Math.max(0,Math.min(dimensions.width,event.clientX-bounds.left)),Math.max(0,Math.min(dimensions.height,event.clientY-bounds.top))];
@@ -76,12 +82,21 @@ export function PdfPage({document,page,zoom,tool,onSelect,selection,links,onLink
   const ready=rendered?.path===document.path&&rendered.revision===document.revision&&rendered.page===page&&rendered.zoom===zoom;
   const model=document.pages[page-1];
   const shown=drag || (selection && [selection[0]*dimensions.width/model.width,selection[1]*dimensions.height/model.height,selection[2]*dimensions.width/model.width,selection[3]*dimensions.height/model.height]);
-  return <div className="paper" data-session={document.id} data-revision={document.revision} data-rendered-revision={ready?document.revision:-1} ref={wrapper} style={{width:dimensions.width,height:dimensions.height}}>
+  function selectText(event:React.PointerEvent){
+    if(!directText||!ready||busy||(event.target as Element).closest('.inline-text-editor,.inline-text-toolbar'))return;
+    const position=point(event).map((value,index)=>value*(index?model.height/dimensions.height:model.width/dimensions.width));
+    const selected=window.getSelection()?.toString()||'';
+    if(tool==='add_text'){onBeginText(null,position,'');return;}
+    const block=textBlocks.find(item=>position[0]>=item.rect[0]&&position[0]<=item.rect[2]&&position[1]>=item.rect[1]&&position[1]<=item.rect[3]);
+    if(block){const range=window.getSelection();const anchor=range?.anchorNode;const content=anchor?.textContent||'';const offset=content?block.text.indexOf(content):-1;const caret=anchor&&textLayer.current?.contains(anchor)&&offset>=0?offset+(range?.anchorOffset||0):undefined;onBeginText(block,position,selected,caret);}
+  }
+  return <div className={`paper ${directText?'direct-text-mode':''}`} onPointerUp={selectText} data-session={document.id} data-revision={document.revision} data-rendered-revision={ready?document.revision:-1} ref={wrapper} style={{width:dimensions.width,height:dimensions.height}}>
     <canvas ref={canvas}/><div ref={textLayer} className="textLayer" style={{pointerEvents:choose?'none':'auto'}}/>
-    {!choose&&links.map((link,index)=><button key={index} className="pdf-link" aria-label={link.uri?`Open link ${link.uri}`:`Go to page ${link.page}`} title={link.uri||`Page ${link.page}`} onClick={()=>onLink(link)} style={{left:link.rect[0]*dimensions.width/model.width,top:link.rect[1]*dimensions.height/model.height,width:(link.rect[2]-link.rect[0])*dimensions.width/model.width,height:(link.rect[3]-link.rect[1])*dimensions.height/model.height}}/>)}
+    {!choose&&!directText&&links.map((link,index)=><button key={index} className="pdf-link" aria-label={link.uri?`Open link ${link.uri}`:`Go to page ${link.page}`} title={link.uri||`Page ${link.page}`} onClick={()=>onLink(link)} style={{left:link.rect[0]*dimensions.width/model.width,top:link.rect[1]*dimensions.height/model.height,width:(link.rect[2]-link.rect[0])*dimensions.width/model.width,height:(link.rect[3]-link.rect[1])*dimensions.height/model.height}}/>)}
     {choose && ready && <div className="selection-surface" onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={()=>{start.current=null;setDrag(null);ink.current=[];setActiveInk([]);}}/>}
     {tool==='ink'&&<svg className="ink-preview" width={dimensions.width} height={dimensions.height} aria-label="Ink preview"><g fill="none" stroke={inkColor} strokeWidth={inkWidth*zoom} strokeLinecap="round" strokeLinejoin="round">{strokes.map((stroke,index)=><polyline key={index} points={stroke.map(p=>`${p[0]*dimensions.width/model.width},${p[1]*dimensions.height/model.height}`).join(' ')}/>)}<polyline points={activeInk.map(p=>p.join(',')).join(' ')}/></g></svg>}
-    {shown && <div className={`selection-box ${tool==='redact'?'redaction':''}`} style={{left:shown[0],top:shown[1],width:shown[2]-shown[0],height:shown[3]-shown[1]}}/>}
+    {shown && !directText && <div className={`selection-box ${tool==='redact'?'redaction':''}`} style={{left:shown[0],top:shown[1],width:shown[2]-shown[0],height:shown[3]-shown[1]}}/>}
+    {directText&&ready&&textDraft&&textDraft.documentId===document.id&&textDraft.page===page&&<InlineTextEditor draft={textDraft} zoom={zoom} pageWidth={model.width} pageHeight={model.height} busy={busy} onChange={onChangeText} onApply={onApplyText} onCancel={onCancelText}/>}
     {tool==='fill_forms'&&ready&&!loading&&<FormOverlay fields={fields} values={fieldValues} onChange={onFieldChange} width={dimensions.width} height={dimensions.height} pageWidth={model.width} pageHeight={model.height} disabled={busy}/>}
     {!error&&(loading||!ready) && <div className="page-loading">Rendering page…</div>}
     {error && <div className="page-error">Unable to render this page: {error}</div>}
