@@ -16,7 +16,7 @@ export interface PageInfo {
   links: {rect:number[];page:number;uri:string}[];
 }
 export interface TextRun {text:string;font:string;size:number;color:string;flags:number;offset:number;}
-export interface FontResource {name:string;flags:number;status:'embedded'|'substitute';reason?:string;format?:string;sha256?:string;data?:string;}
+export interface FontResource {name:string;flags:number;status:'embedded'|'compatible'|'substitute';reason?:string;format?:string;sha256?:string;data?:string;}
 export interface TextBlock {id:number;text:string;rect:number[];raw_rect:number[];size:number;font:string;flags:number;color:string;rotation:number;horizontal:boolean;origin:number[];mixed_styles:boolean;runs?:TextRun[];}
 let sequence = 0;
 export async function command<T>(name: string, document?: DocumentInfo | null, args: Record<string,unknown> = {}): Promise<T> {

@@ -71,6 +71,11 @@ try:
     with pdf.open(mixed_scan['path']) as checked:assert checked[0].get_text().count('24680')==1 and checked[0].get_text().count('13579')==1
     capabilities=command({'command':'capabilities'})
     assert capabilities['ocr_languages']==['eng','msa','chi_sim']
+    for font_fixture in ('font-preview.pdf','cff-preview.pdf'):
+        preview_doc=command({'command':'open','args':{'path':str(root/'artifacts'/'fixtures'/font_fixture)}})
+        font_block=command({'command':'inspect_page','session':preview_doc['id'],'args':{'page':1}})['text_blocks'][0]
+        fonts=command({'command':'preview_fonts','session':preview_doc['id'],'revision':preview_doc['revision'],'args':{'fonts':[font_block['font']]}})['fonts']
+        assert fonts[0]['status']=='embedded' and fonts[0]['data'] and fonts[0]['format'] in ('ttf','otf')
     for language,fixture,expected in [('msa','scan-malay.pdf','97531'),('chi_sim','scan-chinese.pdf','文件'),('eng+msa+chi_sim','scan-chinese.pdf','测试')]:
         multilingual=command({'command':'open','args':{'path':str(root/'artifacts'/'fixtures'/fixture)}})
         multilingual=command({'command':'apply','session':multilingual['id'],'revision':multilingual['revision'],'args':{'operation':'ocr','language':language}})
@@ -129,6 +134,7 @@ try:
     receipt['camera_frame_import']=True
     receipt['direct_text_edit_insert_reopen']=True
     receipt['original_mixed_styles_preserved']=True
+    receipt['original_ttf_cff_preview_resources']=True
     receipt['same_source_color_uniform_override']=True
     receipt['mixed_page_ocr_no_duplicates']=True
     processed=command({'command':'scan_preview','args':{**photo,'filter':'black_white'}})

@@ -9,6 +9,7 @@ cffi==2.1.1
 colorama==0.4.6
 cryptography==50.0.2
 et_xmlfile==2.0.0
+fonttools==4.66.1
 frozenlist==1.8.0
 idna==3.20
 iniconfig==2.3.1
@@ -25,10 +26,10 @@ pluggy==1.6.0
 propcache==0.5.4
 pycparser==3.11
 Pygments==2.21.0
-pyHanko==0.37.0
 pyhanko-certvalidator==0.32.1
-pyinstaller==6.22.3
+pyHanko==0.37.0
 pyinstaller-hooks-contrib==2026.8
+pyinstaller==6.22.3
 pymupdf==1.28.2
 pypdfium2==5.14.0
 pytest==9.1.1

@@ -6,6 +6,14 @@ from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 folder=root/'licenses';folder.mkdir(exist_ok=True)
 inventory=[]
+from fontTools import agl
+for label in ('_aglText','_aglfnText'):
+    notice=[]
+    for line in getattr(agl,label).splitlines():
+        if line and not line.startswith('#'):break
+        notice.append(line)
+    destination=folder/'python'/'fonttools'/(label.strip('_')+'-Adobe-NOTICE.txt')
+    destination.parent.mkdir(parents=True,exist_ok=True);destination.write_text('\n'.join(notice)+'\n',encoding='utf-8')
 for package in metadata.distributions():
     name=package.metadata['Name'];version=package.version
     inventory.append({'ecosystem':'python','name':name,'version':version,'license':package.metadata.get('License-Expression') or package.metadata.get('License') or 'See package notices'})

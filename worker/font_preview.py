@@ -2,6 +2,11 @@
 import base64
 import hashlib
 import re
+import pymupdf as pdf
+
+ALIASES={'helvetica':'helv','arial':'helv','arialmt':'helv','helveticabold':'hebo','arialboldmt':'hebo','helveticaoblique':'heit','helveticaboldoblique':'hebi',
+         'timesroman':'tiro','timesnewromanpsmt':'tiro','timesbold':'tibo','timesitalic':'tiit','timesbolditalic':'tibi',
+         'courier':'cour','courierbold':'cobo','courieroblique':'coit','courierboldoblique':'cobi','symbol':'symb','zapfdingbats':'zadb'}
 
 
 def resources(doc,page,args):
@@ -19,14 +24,25 @@ def resources(doc,page,args):
         matches=[item for item in entries if item[0] and clean(item[3])==clean(name)]
         entry=matches[0] if len(matches)==1 else None
         if len(matches)>1:result['reason']='Several embedded font resources share this name; preview mapping needs review.'
-        if entry:
-            _,extension,_,content=doc.extract_font(entry[0])
-            if content:
-                if extension not in ('ttf','otf','woff','woff2'):
-                    result['reason']='This embedded font format needs further preview support.'
-                elif len(content)>8_000_000 or total+len(content)>12_000_000:
-                    result['reason']='This font exceeds the live preview memory limit.'
-                else:
-                    total+=len(content);result.update(status='embedded',format=extension,sha256=hashlib.sha256(content).hexdigest(),data=base64.b64encode(content).decode('ascii'))
+        content=b'';extension='';status='embedded'
+        if entry:_,extension,_,content=doc.extract_font(entry[0])
+        if not content and len(matches)<=1 and clean(name) in ALIASES:
+            content=pdf.Font(ALIASES[clean(name)]).buffer;extension='cff';status='compatible'
+        if content:
+            if len(content)>8_000_000:
+                result['reason']='This font exceeds the live preview memory limit.'
+            else:
+                source_hash=hashlib.sha256(content).hexdigest();source_format=extension
+                if extension=='cff' or (extension=='cid' and content[:4] not in (b'OTTO',b'\x00\x01\x00\x00',b'true')):
+                    try:
+                        from cff_preview import convert
+                        content=convert(content);extension='otf'
+                    except Exception as error:
+                        result['reason']='CFF preview conversion needs further mapping support: '+str(error);content=b''
+                if content:
+                    if extension not in ('ttf','otf','woff','woff2'):result['reason']='This embedded font format needs further preview support.'
+                    elif len(content)>8_000_000 or total+len(content)>12_000_000:result['reason']='This font exceeds the live preview memory limit.'
+                    else:
+                        total+=len(content);result.update(status=status,format=extension,source_format=source_format,source_sha256=source_hash,sha256=hashlib.sha256(content).hexdigest(),data=base64.b64encode(content).decode('ascii'))
         output.append(result)
     return {'fonts':output}

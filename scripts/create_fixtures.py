@@ -94,3 +94,11 @@ tilted=np.full((600,800,3),255,np.uint8)
 for tilted_y in range(100,520,70):
     cv2.putText(tilted,'Local scan reference 57391',(80,tilted_y),cv2.FONT_HERSHEY_SIMPLEX,.9,(20,20,20),2)
 Image.fromarray(cv2.warpAffine(tilted,cv2.getRotationMatrix2D((400,300),7,1),(800,600),borderValue=(255,255,255))).save(folder/'scan-tilted.png')
+
+for filename,fontname,content in [('font-preview.pdf','cjk','Hello Σ café 中文'),('cff-preview.pdf','helv','CFF café Σ')]:
+    with pdf.open() as font_doc:
+        font_page=font_doc.new_page(width=500,height=700)
+        font_page.insert_font(fontname='Source',fontbuffer=pdf.Font(fontname).buffer)
+        font_page.insert_text((40,80),content,fontname='Source',fontsize=20)
+        font_page.insert_text((40,300),'Keep neighbor',fontsize=12)
+        font_doc.save(folder/filename)

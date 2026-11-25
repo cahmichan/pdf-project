@@ -67,6 +67,12 @@
   },
   {
     "ecosystem": "python",
+    "name": "fonttools",
+    "version": "4.66.1",
+    "license": "MIT"
+  },
+  {
+    "ecosystem": "python",
     "name": "frozenlist",
     "version": "1.8.0",
     "license": "Apache-2.0"
